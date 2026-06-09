@@ -1,30 +1,45 @@
-import { defineConfig } from 'wxt';
+import { defineConfig } from "wxt";
+import { writeFileSync, cpSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 export default defineConfig({
-  modules: ['@wxt-dev/module-react'],
+  modules: ["@wxt-dev/module-react"],
   manifest: {
-    name: 'BlockSite',
-    description: '浏览器网站拦截插件 — 帮助你保持专注',
-    version: '1.0.0',
-    permissions: ['declarativeNetRequest', 'declarativeNetRequestWithHostAccess', 'storage', 'alarms', 'tabs', 'webNavigation'],
-    host_permissions: ['<all_urls>'],
-    icons: {
-      16: '/icons/icon-16.png',
-      48: '/icons/icon-48.png',
-      128: '/icons/icon-128.png',
-    },
-    options_ui: {
-      page: 'options.html',
-      open_in_tab: true,
-    },
+    name: "__MSG_appName__",
+    description: "__MSG_appDescription__",
+    version: "2.0.0",
+    permissions: [
+      "declarativeNetRequest",
+      "declarativeNetRequestWithHostAccess",
+      "storage",
+      "alarms",
+      "tabs",
+      "webNavigation",
+    ],
+    host_permissions: ["<all_urls>"],
     action: {
-      default_title: 'BlockSite',
-      default_popup: 'popup/index.html',
-      default_icon: {
-        16: '/icons/icon-16.png',
-        48: '/icons/icon-48.png',
-        128: '/icons/icon-128.png',
-      },
+      default_title: "BlockSite",
+      default_popup: "popup/index.html",
+    },
+  },
+  hooks: {
+    "build:done": () => {
+      const manifestPath = resolve(".output/chrome-mv3/manifest.json");
+      const manifest = JSON.parse(require("node:fs").readFileSync(manifestPath, "utf-8"));
+      manifest.default_locale = "en";
+      manifest.options_ui = {
+        page: "options.html",
+        open_in_tab: true,
+      };
+      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+      console.log("  │ options_ui.open_in_tab = true");
+
+      const localesSrc = resolve("_locales");
+      const localesDest = resolve(".output/chrome-mv3/_locales");
+      if (existsSync(localesSrc)) {
+        cpSync(localesSrc, localesDest, { recursive: true });
+        console.log("  │ _locales copied to output");
+      }
     },
   },
 });

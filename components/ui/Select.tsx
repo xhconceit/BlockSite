@@ -1,24 +1,15 @@
-import type { SelectHTMLAttributes } from 'react';
+import { type SelectHTMLAttributes, forwardRef } from "react";
 
-interface SelectOption {
-  value: string;
-  label: string;
+interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  options: { value: string; label: string }[];
 }
 
-interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> {
-  label?: string;
-  options: SelectOption[];
-  onChange: (value: string) => void;
-}
-
-export default function Select({ label, options, value, onChange, className = '', ...props }: SelectProps) {
-  return (
-    <div className="w-full">
-      {label && <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">{label}</label>}
+const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ className = "", options, ...props }, ref) => {
+    return (
       <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent cursor-pointer ${className}`}
+        ref={ref}
+        className={`flex h-10 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-lime-300 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 ${className}`}
         {...props}
       >
         {options.map((opt) => (
@@ -27,6 +18,10 @@ export default function Select({ label, options, value, onChange, className = ''
           </option>
         ))}
       </select>
-    </div>
-  );
-}
+    );
+  },
+);
+Select.displayName = "Select";
+
+export { Select };
+export type { SelectProps };

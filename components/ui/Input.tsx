@@ -1,19 +1,16 @@
-import type { InputHTMLAttributes } from 'react';
+import { type InputHTMLAttributes, forwardRef } from "react";
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-}
-
-export default function Input({ label, error, className = '', ...props }: InputProps) {
-  return (
-    <div className="w-full">
-      {label && <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">{label}</label>}
+const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  ({ className = "", ...props }, ref) => {
+    return (
       <input
-        className={`w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-colors ${error ? 'border-[var(--color-danger)]' : ''} ${className}`}
+        ref={ref}
+        className={`flex h-10 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-300 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 ${className}`}
         {...props}
       />
-      {error && <p className="mt-1 text-xs text-[var(--color-danger)]">{error}</p>}
-    </div>
-  );
-}
+    );
+  },
+);
+Input.displayName = "Input";
+
+export { Input };

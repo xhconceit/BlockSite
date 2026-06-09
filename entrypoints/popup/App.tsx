@@ -1,155 +1,279 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { AppConfig } from '../../types';
-import { loadConfig, saveConfig } from '../../lib/storage';
-import { applyRules, clearAllRules } from '../../lib/rules';
-import { useCurrentTab } from '../../hooks/useCurrentTab';
-import { extractDomain } from '../../utils/url';
-import { generateId } from '../../utils/id';
+import { useState, useEffect } from "react";
+import { Button } from "../../components/ui/Button";
+import { Toggle } from "../../components/ui/Toggle";
+import { Select } from "../../components/ui/Select";
+import { Input } from "../../components/ui/Input";
+import { Badge } from "../../components/ui/Badge";
+import { CATEGORIES, CATEGORY_INFO } from "../../packages/core/src";
+import type { Category, BlockedItem, AppConfig } from "../../packages/core/src";
+import { useI18n } from "../../hooks/useI18n";
 
-export default function App() {
-  const [config, setConfig] = useState<AppConfig | null>(null);
-  const { url, domain, title } = useCurrentTab();
-  const [adding, setAdding] = useState(false);
-
-  useEffect(() => {
-    loadConfig().then(setConfig);
-    const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
-      if (changes['blocksite_config']) {
-        setConfig(changes['blocksite_config'].newValue);
-      }
-    };
-    chrome.storage.onChanged.addListener(listener);
-    return () => chrome.storage.onChanged.removeListener(listener);
-  }, []);
-
-  const handleToggle = useCallback(async () => {
-    if (!config) return;
-    const enabled = !config.enabled;
-    const updated = { ...config, enabled };
-    setConfig(updated);
-    await saveConfig(updated);
-    if (enabled) {
-      await applyRules(updated.blockedItems);
-    } else {
-      await clearAllRules();
-    }
-  }, [config]);
-
-  const handleAddCurrentSite = useCallback(async () => {
-    if (!config || !domain) return;
-    const exists = config.blockedItems.some(
-      (item) => item.type === 'domain' && item.value === domain,
-    );
-    if (exists) return;
-    setAdding(true);
-    const newItem = {
-      id: generateId(),
-      type: 'domain' as const,
-      value: domain,
-      enabled: true,
-      category: 'custom' as const,
-      customMessage: '',
-    };
-    const updatedItems = [...config.blockedItems, newItem];
-    const updated = { ...config, blockedItems: updatedItems };
-    setConfig(updated);
-    await saveConfig(updated);
-    if (updated.enabled) {
-      await applyRules(updatedItems);
-    }
-    setAdding(false);
-  }, [config, domain]);
-
-  const isCurrentBlocked = config?.blockedItems.some(
-    (item) => item.enabled && item.type === 'domain' && item.value === domain,
-  );
-
-  if (!config) {
-    return <div className="p-4 text-center text-slate-500">加载中...</div>;
-  }
-
-  return (
-    <div className="flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🛡️</span>
-          <h1 className="text-lg font-bold">BlockSite</h1>
-        </div>
-        <ToggleSwitch checked={config.enabled} onChange={handleToggle} />
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-2 p-4 border-b border-[var(--color-border)]">
-        <div className="bg-[var(--color-surface)] rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-[var(--color-primary)]">{config.stats.todayBlocked}</div>
-          <div className="text-xs text-[var(--color-text-muted)] mt-0.5">今日拦截</div>
-        </div>
-        <div className="bg-[var(--color-surface)] rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-[var(--color-success)]">{config.blockedItems.filter((i) => i.enabled).length}</div>
-          <div className="text-xs text-[var(--color-text-muted)] mt-0.5">活跃规则</div>
-        </div>
-      </div>
-
-      {/* Current Site */}
-      {domain && (
-        <div className="p-4 border-b border-[var(--color-border)]">
-          <div className="text-xs text-[var(--color-text-muted)] mb-1.5">当前网站</div>
-          <div className="flex items-center gap-2 mb-3">
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
-              alt=""
-              className="w-4 h-4 rounded"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-            <span className="text-sm font-medium truncate">{domain}</span>
-            {isCurrentBlocked && (
-              <span className="px-1.5 py-0.5 rounded text-xs bg-red-500/20 text-red-400">已拦截</span>
-            )}
-          </div>
-          {isCurrentBlocked ? (
-            <div className="text-xs text-slate-500">此网站已在拦截列表中</div>
-          ) : (
-            <button
-              onClick={handleAddCurrentSite}
-              disabled={adding}
-              className="w-full py-2 rounded-lg text-sm font-medium bg-[var(--color-danger)] hover:bg-red-600 text-white transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {adding ? '添加中...' : `拦截 ${domain}`}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Links */}
-      <div className="p-4">
-        <button
-          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('options.html') })}
-          className="w-full py-2.5 rounded-lg text-sm font-medium bg-[var(--color-surface)] hover:bg-[var(--color-border)] text-[var(--color-text)] transition-colors cursor-pointer"
-        >
-          打开设置页面
-        </button>
-      </div>
-    </div>
-  );
+interface PopupState {
+  config: AppConfig;
+  rules: BlockedItem[];
+  todayBlocks: number;
+  activeRules: number;
+  currentUrl: string;
 }
 
-function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+export default function App() {
+  const { t } = useI18n();
+  const [state, setState] = useState<PopupState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [quickAddCategory, setQuickAddCategory] = useState<Category>("custom");
+  const [quickAddMessage, setQuickAddMessage] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  useEffect(() => {
+    loadState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function loadState() {
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: "getConfig" });
+      if (resp?.error) throw new Error(resp.error);
+      const tab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+      const url = tab?.url || "";
+      const hostname = url ? new URL(url).hostname.replace(/^www\./, "") : "";
+      const statsResp = await chrome.runtime.sendMessage({
+        type: "getStats",
+        from: new Date().toISOString().split("T")[0]!,
+        to: new Date().toISOString().split("T")[0]!,
+      });
+      const rules = resp.rules || [];
+      setState({
+        config: resp.config || { enabled: true, autoRecoverMinutes: 30 },
+        rules,
+        todayBlocks: statsResp?.today || 0,
+        activeRules: rules.filter((r: BlockedItem) => r.enabled).length,
+        currentUrl: hostname,
+      });
+      setError("");
+    } catch (err) {
+      console.error("[Popup]", err);
+      setError(t("popup_loadFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleToggle(enabled: boolean) {
+    try {
+      await chrome.runtime.sendMessage({ type: "toggleEnabled", enabled });
+      setState((prev) => (prev ? { ...prev, config: { ...prev.config, enabled } } : null));
+    } catch (err) {
+      console.error("[Popup] Toggle failed:", err);
+    }
+  }
+
+  async function handleQuickAdd() {
+    if (!state?.currentUrl) return;
+    setAdding(true);
+    const item: BlockedItem = {
+      id: crypto.randomUUID(),
+      type: "domain",
+      value: state.currentUrl,
+      enabled: true,
+      category: quickAddCategory,
+      customMessage: quickAddMessage.trim(),
+      order: state.rules.length,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    try {
+      await chrome.runtime.sendMessage({ type: "updateRules", items: [...state.rules, item] });
+      setState((prev) => (prev ? { ...prev, rules: [...prev.rules, item] } : null));
+      setQuickAddMessage("");
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+    } catch (err) {
+      console.error("[Popup] Quick add failed:", err);
+      setError(t("popup_loadFailed"));
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="w-[360px] h-[500px] bg-zinc-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-lime-300 border-t-transparent rounded-full animate-spin" />
+          <p className="text-zinc-500 text-sm">{t("common_loading")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !state) {
+    return (
+      <div className="w-[360px] h-[500px] bg-zinc-900 flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="text-red-400 mb-3 text-4xl">!</div>
+          <p className="text-zinc-300 text-sm mb-4">{error}</p>
+          <Button
+            size="sm"
+            onClick={() => {
+              setError("");
+              setLoading(true);
+              loadState();
+            }}
+          >
+            {t("common_retry")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!state) return null;
+
+  const alreadyBlocked = state.rules.some(
+    (r) => r.type === "domain" && r.value === state.currentUrl,
+  );
+
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer ${
-        checked ? 'bg-[var(--color-success)]' : 'bg-[var(--color-border)]'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
+    <div className="w-[360px] h-[500px] bg-zinc-900 text-zinc-100 flex flex-col overflow-hidden">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-lime-300 flex items-center justify-center">
+            <svg
+              className="w-5 h-5 text-zinc-900"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-base font-bold leading-tight">{t("popup_title")}</h1>
+            <p className="text-xs text-zinc-500">
+              {t("popup_blocksToday", [String(state.todayBlocks)])}
+            </p>
+          </div>
+        </div>
+        <Toggle checked={state.config.enabled} onCheckedChange={handleToggle} label="Toggle" />
+      </header>
+
+      <div className="grid grid-cols-3 gap-0.5 px-4 py-2.5 border-b border-zinc-800 shrink-0">
+        <div className="text-center">
+          <p className="text-lg font-bold text-lime-300">{state.activeRules}</p>
+          <p className="text-[10px] text-zinc-500">{t("popup_activeRules")}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-bold text-zinc-200">{state.todayBlocks}</p>
+          <p className="text-[10px] text-zinc-500">
+            {t("popup_blocksToday", [String(state.todayBlocks)])}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-bold text-zinc-200">{state.rules.length}</p>
+          <p className="text-[10px] text-zinc-500">{t("popup_totalRules")}</p>
+        </div>
+      </div>
+
+      <div className="p-4 border-b border-zinc-800 shrink-0">
+        <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
+          {t("popup_currentSite")}
+        </p>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-2 h-2 rounded-full bg-lime-300 shrink-0" />
+          <p className="text-sm font-mono text-zinc-200 truncate">
+            {state.currentUrl || t("popup_noSite")}
+          </p>
+        </div>
+        {!state.currentUrl ? (
+          <p className="text-xs text-zinc-600">{t("popup_openSite")}</p>
+        ) : alreadyBlocked ? (
+          <div className="flex items-center gap-2">
+            <Badge
+              color={
+                CATEGORY_INFO[
+                  state.rules.find((r) => r.type === "domain" && r.value === state.currentUrl)
+                    ?.category ?? "custom"
+                ].themeColor
+              }
+            >
+              {t("popup_alreadyBlocked")}
+            </Badge>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Select
+              options={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_INFO[c].label }))}
+              value={quickAddCategory}
+              onChange={(e) => setQuickAddCategory(e.target.value as Category)}
+              className="flex-1"
+            />
+            <Input
+              placeholder={t("popup_customMessage")}
+              value={quickAddMessage}
+              onChange={(e) => setQuickAddMessage(e.target.value)}
+            />
+            <Button className="w-full" size="sm" onClick={handleQuickAdd} disabled={adding}>
+              {adding ? t("popup_adding") : added ? t("popup_blocked") : t("popup_blockThisSite")}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-auto p-4">
+        <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
+          {t("popup_blockedSites", [String(state.rules.length)])}
+        </p>
+        {state.rules.length === 0 ? (
+          <p className="text-xs text-zinc-600 text-center py-6">{t("popup_noSites")}</p>
+        ) : (
+          <div className="space-y-1">
+            {state.rules.slice(0, 20).map((rule) => (
+              <div
+                key={rule.id}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-800/50 transition-colors group"
+              >
+                <div
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: CATEGORY_INFO[rule.category].themeColor }}
+                />
+                <span className="text-sm font-mono text-zinc-300 truncate flex-1">
+                  {rule.value}
+                </span>
+                <Badge color={CATEGORY_INFO[rule.category].themeColor}>
+                  {CATEGORY_INFO[rule.category].label}
+                </Badge>
+                {!rule.enabled && (
+                  <span className="text-[10px] text-zinc-600">{t("popup_paused")}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <footer className="flex border-t border-zinc-800 shrink-0">
+        <button
+          className="flex-1 py-2.5 text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors text-center"
+          onClick={() => chrome.runtime.openOptionsPage()}
+        >
+          {t("common_settings")}
+        </button>
+        <button
+          className="flex-1 py-2.5 text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors text-center border-l border-zinc-800"
+          onClick={() => {
+            chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+          }}
+        >
+          {t("common_dashboard")}
+        </button>
+      </footer>
+    </div>
   );
 }

@@ -1,174 +1,318 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { Category } from '../../types';
-import { getQuote } from '../../lib/quotes';
-import { formatCountdown } from '../../utils/format';
+import { useState, useEffect } from "react";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Badge } from "../../components/ui/Badge";
+import { CATEGORY_INFO } from "../../packages/core/src";
+import type { Category, QuoteItem } from "../../packages/core/src";
 
-function getParam(name: string): string {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(name) || '';
+interface PageState {
+  ruleId: string;
+  category: Category;
+  customMessage: string;
+  blockedUrl: string;
+  blockCount: number;
+  themeColor: string;
+  unlocked: boolean;
+  unlockUntil: number | null;
+  warning: boolean;
+  quote: QuoteItem | undefined;
+  remainingUnlocks: number;
 }
 
-export default function App() {
-  const ruleId = getParam('ruleId');
-  const category = (getParam('category') || 'custom') as Category;
-  const customMessage = getParam('customMessage');
+const DEFAULT_QUOTES: Record<string, QuoteItem[]> = {
+  social: [
+    { id: "1", text: "真正的朋友不在屏幕里", author: "" },
+    { id: "2", text: "你刷走的不是时间，是机会", author: "" },
+    { id: "3", text: "社交媒体的算法比你更了解你的弱点", author: "" },
+    { id: "4", text: "点赞不会让你更快乐，专注会让你更充实", author: "" },
+    { id: "5", text: "别人的人生精选集不等于你的日常", author: "" },
+  ],
+  video: [
+    { id: "1", text: "看完这个视频你什么也不会改变", author: "" },
+    { id: "2", text: "算法的尽头不是充实，是空虚", author: "" },
+    { id: "3", text: "下一个视频不会更好", author: "" },
+    { id: "4", text: "真正的好内容值得搜索，不是被推送", author: "" },
+    { id: "5", text: "Binge-watching 不是休息，是逃避", author: "" },
+  ],
+  game: [
+    { id: "1", text: "通关的人生不在游戏里", author: "" },
+    { id: "2", text: "每局 20 分钟，一年就是 120 小时", author: "" },
+    { id: "3", text: "游戏里的成就不会出现在你的简历上", author: "" },
+    { id: "4", text: "延迟满足是成年人最重要的能力", author: "" },
+    { id: "5", text: "打完这一把，你也不会变得更好", author: "" },
+  ],
+  news: [
+    { id: "1", text: "99% 的新闻和你无关", author: "" },
+    { id: "2", text: "信息焦虑不会让你更博学", author: "" },
+    { id: "3", text: "真正的深度来自书籍，不是碎片信息", author: "" },
+    { id: "4", text: "24 小时新闻是注意力的工业污染", author: "" },
+    { id: "5", text: "少看新闻，多读历史", author: "" },
+  ],
+  adult: [
+    { id: "1", text: "这不是你真正需要的", author: "" },
+    { id: "2", text: "你值得更健康的娱乐方式", author: "" },
+    { id: "3", text: "短暂的刺激不会带来持久的满足", author: "" },
+    { id: "4", text: "真正的亲密不在屏幕里", author: "" },
+    { id: "5", text: "尊重自己，也尊重他人", author: "" },
+  ],
+  custom: [
+    { id: "1", text: "保持专注，你可以做到", author: "" },
+    { id: "2", text: "每一次克制都是进步", author: "" },
+    { id: "3", text: "你的未来由专注的此刻构成", author: "" },
+    { id: "4", text: "拖延的每一分钟都是你在欠自己", author: "" },
+    { id: "5", text: "先完成，再放松", author: "" },
+  ],
+};
 
-  const [blockedUrl, setBlockedUrl] = useState('');
-  const [quote] = useState(() => getQuote(category));
-  const [showPasswordInput, setShowPasswordInput] = useState(false);
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [passwordEnabled, setPasswordEnabled] = useState(false);
-  const [unlockSuccess, setUnlockSuccess] = useState(false);
-  const [tempUnlockUntil, setTempUnlockUntil] = useState<number | null>(null);
-  const [countdown, setCountdown] = useState('');
+export default function App() {
+  const [state, setState] = useState<PageState | null>(null);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [countdown, setCountdown] = useState("");
+  const [extending, setExtending] = useState(false);
 
   useEffect(() => {
-    chrome.runtime.sendMessage({ type: 'blockPageOpened' }).then((response) => {
-      if (response?.blockedUrl) {
-        setBlockedUrl(response.blockedUrl);
-      }
-    });
-    checkTempUnlock();
-    checkPasswordStatus();
+    initPage();
   }, []);
 
   useEffect(() => {
-    if (!tempUnlockUntil) return;
+    if (!state?.unlockUntil) return;
     const timer = setInterval(() => {
-      const remaining = Math.max(0, Math.ceil((tempUnlockUntil - Date.now()) / 1000));
-      setCountdown(formatCountdown(remaining));
+      const remaining = state.unlockUntil! - Date.now();
       if (remaining <= 0) {
+        setState((prev) => (prev ? { ...prev, unlocked: false, unlockUntil: null } : null));
         clearInterval(timer);
-        setTempUnlockUntil(null);
-        setUnlockSuccess(false);
+      } else {
+        const m = Math.floor(remaining / 60000);
+        const s = Math.floor((remaining % 60000) / 1000);
+        setCountdown(`${m}:${s.toString().padStart(2, "0")}`);
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [tempUnlockUntil]);
+  }, [state?.unlockUntil]);
 
-  const checkTempUnlock = async () => {
-    const response = await chrome.runtime.sendMessage({ type: 'checkTempUnlock' });
-    if (response.unlocked) {
-      setTempUnlockUntil(response.tempUnlockUntil);
-      setUnlockSuccess(true);
+  async function initPage() {
+    const params = new URLSearchParams(window.location.search);
+    const ruleId = params.get("ruleId") || "";
+    const category = (params.get("category") || "custom") as Category;
+    const customMessage = params.get("customMessage") || "";
+
+    const info = CATEGORY_INFO[category];
+    const quotes = DEFAULT_QUOTES[category] || DEFAULT_QUOTES.custom!;
+    const quote = quotes[Math.floor(Math.random() * quotes.length)];
+
+    try {
+      const [urlResp, checkResp] = await Promise.all([
+        chrome.runtime.sendMessage({ type: "getBlockedUrl" }),
+        chrome.runtime.sendMessage({ type: "checkUnlock", category }),
+      ]);
+
+      setState({
+        ruleId,
+        category,
+        customMessage: decodeURIComponent(customMessage),
+        blockedUrl: (urlResp as { url: string })?.url || "",
+        blockCount: 0,
+        themeColor: info.themeColor,
+        unlocked: (checkResp as { active: boolean })?.active || false,
+        unlockUntil: (checkResp as { until: number | null })?.until || null,
+        warning: (checkResp as { warning: boolean })?.warning || false,
+        quote,
+        remainingUnlocks: 5,
+      });
+    } catch {
+      setState({
+        ruleId,
+        category,
+        customMessage: decodeURIComponent(customMessage),
+        blockedUrl: "",
+        blockCount: 0,
+        themeColor: info.themeColor,
+        unlocked: false,
+        unlockUntil: null,
+        warning: false,
+        quote,
+        remainingUnlocks: 5,
+      });
     }
-  };
 
-  const checkPasswordStatus = async () => {
-    const config = await chrome.runtime.sendMessage({ type: 'getConfig' });
-    setPasswordEnabled(config.passwordEnabled);
-  };
+    chrome.runtime
+      .sendMessage({
+        type: "blockPageOpened",
+        ruleId,
+        category,
+      })
+      .catch(() => {});
+  }
 
-  const handleUnlock = useCallback(async () => {
-    if (passwordEnabled) {
-      if (!showPasswordInput) {
-        setShowPasswordInput(true);
-        return;
+  async function handleUnlock() {
+    if (!state) return;
+    try {
+      const resp = await chrome.runtime.sendMessage({
+        type: "unlock",
+        category: state.category,
+        password,
+      });
+
+      if (resp.success) {
+        setState((prev) => (prev ? { ...prev, unlocked: true, unlockUntil: resp.until } : null));
+        setError("");
+        setTimeout(() => {
+          window.location.href = state.blockedUrl || "about:blank";
+        }, 300);
+      } else {
+        setError(resp.error || "Incorrect password");
       }
-      const config = await chrome.runtime.sendMessage({ type: 'getConfig' });
-      const { verifyPassword } = await import('../../lib/password');
-      const valid = await verifyPassword(password, config.passwordHash);
-      if (!valid) {
-        setError('密码错误');
-        return;
-      }
+    } catch {
+      setError("Failed to unlock");
     }
+  }
 
-    const response = await chrome.runtime.sendMessage({ type: 'tempUnlock', minutes: 5 });
-    if (response.success) {
-      setTempUnlockUntil(response.tempUnlockUntil);
-      setUnlockSuccess(true);
-      setShowPasswordInput(false);
-      setPassword('');
-      setError('');
-      if (blockedUrl) {
-        window.location.href = blockedUrl;
+  async function handleExtend() {
+    if (!state) return;
+    setExtending(true);
+    try {
+      const resp = await chrome.runtime.sendMessage({
+        type: "extendUnlock",
+        category: state.category,
+        password,
+        additionalMinutes: 5,
+      });
+      if (resp.success) {
+        setState((prev) => (prev ? { ...prev, unlockUntil: resp.until } : null));
       }
+    } catch {
+      /* ignore */
     }
-  }, [passwordEnabled, showPasswordInput, password, blockedUrl]);
+    setExtending(false);
+  }
 
-  const handleBack = () => {
-    window.history.back();
-  };
-
-  if (unlockSuccess) {
+  if (!state) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center p-8" style={{ backgroundColor: '#0f172a' }}>
-        <div className="max-w-md">
-          <div className="text-6xl mb-6">🔓</div>
-          <h1 className="text-2xl font-bold text-white mb-4">临时解锁中</h1>
-          <p className="text-slate-400 mb-2">当前网站已临时解锁，5 分钟后自动恢复拦截。</p>
-          {countdown && <p className="text-lg font-mono" style={{ color: quote.themeColor }}>剩余时间：{countdown}</p>}
-          {blockedUrl && (
-            <a href={blockedUrl} className="inline-block mt-6 px-6 py-2.5 rounded-lg font-medium text-white transition-colors" style={{ backgroundColor: quote.themeColor }}>
-              前往网站
-            </a>
-          )}
-        </div>
+      <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-lime-300 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
+  const info = CATEGORY_INFO[state.category];
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8" style={{ backgroundColor: '#0f172a' }}>
-      <div className="max-w-lg w-full">
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-4">⏳</div>
-          <h1 className="text-3xl font-bold text-white mb-2">网站已被拦截</h1>
-          {blockedUrl && <p className="text-slate-400 text-sm break-all">{blockedUrl}</p>}
-        </div>
+    <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Category glow */}
+      <div
+        className="absolute inset-0 opacity-[0.08] animate-pulse"
+        style={{
+          background: `radial-gradient(ellipse at 50% 40%, ${state.themeColor} 0%, transparent 60%)`,
+        }}
+      />
 
-        <div
-          className="rounded-2xl p-8 mb-6 text-center border"
-          style={{ borderColor: `${quote.themeColor}30`, backgroundColor: `${quote.themeColor}10` }}
-        >
-          {customMessage ? (
-            <p className="text-xl font-medium leading-relaxed text-white">{customMessage}</p>
-          ) : (
-            <>
-              <p className="text-xl font-medium leading-relaxed text-white mb-3">"{quote.text}"</p>
-              <p className="text-sm" style={{ color: quote.themeColor }}>— {quote.author}</p>
-            </>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={handleUnlock}
-            className="w-full py-3 rounded-xl font-medium text-white transition-all duration-200 hover:opacity-90 cursor-pointer"
-            style={{ backgroundColor: quote.themeColor }}
+      <div className="relative z-10 w-full max-w-md space-y-10 animate-in fade-in zoom-in-95 duration-300">
+        {/* Icon */}
+        <div className="text-center">
+          <div
+            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4"
+            style={{
+              background: `linear-gradient(135deg, ${state.themeColor}30, ${state.themeColor}10)`,
+              border: `1px solid ${state.themeColor}30`,
+            }}
           >
-            {showPasswordInput ? '确认密码并解锁' : '临时解锁 5 分钟'}
-          </button>
-
-          {showPasswordInput && (
-            <div className="flex flex-col gap-2">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-                placeholder={passwordEnabled ? '请输入密码' : '设置密码后方可使用'}
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
-                style={{ focusRingColor: quote.themeColor }}
-                autoFocus
+            <svg
+              className="w-10 h-10"
+              style={{ color: state.themeColor }}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
               />
-              {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-            </div>
-          )}
-
-          <button
-            onClick={handleBack}
-            className="w-full py-2.5 rounded-xl font-medium text-slate-400 hover:text-white border border-slate-700 hover:bg-slate-800 transition-all duration-200 cursor-pointer"
-          >
-            返回上一页
-          </button>
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold text-zinc-100 mb-1">Site Blocked</h1>
+          <Badge color={state.themeColor}>{info.label}</Badge>
         </div>
 
-        <p className="text-center text-xs text-slate-600 mt-8">
-          BlockSite — 帮助你保持专注
-        </p>
+        {/* URL */}
+        {state.blockedUrl && (
+          <p className="text-center text-sm text-zinc-600 font-mono break-all px-4">
+            {state.blockedUrl}
+          </p>
+        )}
+
+        {/* Quote */}
+        <div
+          className="rounded-2xl p-6 text-center relative overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${state.themeColor}15, ${state.themeColor}05)`,
+            border: `1px solid ${state.themeColor}20`,
+          }}
+        >
+          <p className="text-base font-medium leading-relaxed" style={{ color: state.themeColor }}>
+            {state.customMessage || state.quote?.text || "Stay focused."}
+          </p>
+          {!state.customMessage && state.quote?.author ? (
+            <p className="text-sm text-zinc-600 mt-3">— {state.quote.author}</p>
+          ) : null}
+        </div>
+
+        {/* Unlock */}
+        {!state.unlocked ? (
+          <div className="space-y-3">
+            <Input
+              type="password"
+              placeholder="Enter password to unlock temporarily"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleUnlock();
+              }}
+              autoFocus
+            />
+            {error && (
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <span>!</span> {error}
+              </p>
+            )}
+            <Button
+              className="w-full"
+              style={{ background: state.themeColor, color: "#18181b" }}
+              onClick={handleUnlock}
+              disabled={!password}
+            >
+              Unlock
+            </Button>
+            <p className="text-center text-xs text-zinc-600">
+              {state.remainingUnlocks} unlocks remaining today
+            </p>
+          </div>
+        ) : (
+          /* Active unlock */
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-400/10 border border-green-400/20">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-green-400 text-sm font-medium">Unlocked</span>
+            </div>
+            {countdown && <p className="text-3xl font-mono font-bold text-zinc-100">{countdown}</p>}
+            {state.warning && (
+              <div className="space-y-2">
+                <p className="text-amber-400 text-sm">Unlock expires soon</p>
+                <Button variant="outline" size="sm" onClick={handleExtend} disabled={extending}>
+                  {extending ? "Extending..." : "Extend 5 minutes"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <p className="text-center text-xs text-zinc-700">BlockSite · Stay focused</p>
       </div>
     </div>
   );

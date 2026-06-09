@@ -1,6 +1,6 @@
 {
   "name": "blocksite",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,14 @@
     "build:firefox": "wxt build -b firefox",
     "build:safari": "wxt build -b safari",
     "zip": "wxt zip",
-    "zip:firefox": "wxt zip -b firefox"
+    "zip:firefox": "wxt zip -b firefox",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "typecheck": "tsc --noEmit",
+    "prepare": "simple-git-hooks"
   },
   "dependencies": {
     "react": "^19.1.0",
@@ -18,13 +25,23 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
+    "@types/chrome": "^0.1.43",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@wxt-dev/module-react": "^1.1.0",
     "autoprefixer": "^10.4.0",
+    "fake-indexeddb": "^6.2.5",
+    "happy-dom": "^17.0.0",
+    "oxfmt": "^0.17.0",
+    "oxlint": "^0.17.0",
     "postcss": "^8.5.0",
+    "simple-git-hooks": "^2.11.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0",
+    "vitest": "^3.2.0",
     "wxt": "^0.20.0"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm format:check && pnpm lint && pnpm test"
   }
 }

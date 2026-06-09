@@ -1,51 +1,52 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useEffect, useState } from "react";
 
-let toastId = 0;
+type ToastType = "success" | "error" | "info";
 
-interface ToastMessage {
-  id: number;
+interface ToastData {
+  id: string;
   message: string;
-  type: 'success' | 'error' | 'info';
+  type: ToastType;
 }
 
-let addToastFn: ((message: string, type: 'success' | 'error' | 'info') => void) | null = null;
+const listeners = new Set<(toast: ToastData) => void>();
 
-export function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
-  addToastFn?.(message, type);
+export function showToast(message: string, type: ToastType = "info"): void {
+  const toast: ToastData = { id: crypto.randomUUID(), message, type };
+  for (const listener of listeners) {
+    listener(toast);
+  }
 }
 
-export function ToastContainer() {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  const addToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
-    const id = ++toastId;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
-  }, []);
+function ToastContainer() {
+  const [toasts, setToasts] = useState<ToastData[]>([]);
 
   useEffect(() => {
-    addToastFn = addToast;
-    return () => {
-      addToastFn = null;
+    const handler = (toast: ToastData) => {
+      setToasts((prev) => [...prev, toast]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+      }, 3000);
     };
-  }, [addToast]);
+    listeners.add(handler);
+    return () => {
+      listeners.delete(handler);
+    };
+  }, []);
 
-  if (toasts.length === 0) return null;
-
-  const typeStyles: Record<string, string> = {
-    success: 'bg-green-500/20 border-green-500 text-green-400',
-    error: 'bg-red-500/20 border-red-500 text-red-400',
-    info: 'bg-blue-500/20 border-blue-500 text-blue-400',
-  };
+  if (toasts.length === 0) return <></>;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`px-4 py-2.5 rounded-lg border text-sm shadow-lg animate-slide-in ${typeStyles[toast.type]}`}
+          className={`rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg animate-in slide-in-from-right duration-200 ${
+            toast.type === "error"
+              ? "bg-red-400/10 border border-red-400/30 text-red-400"
+              : toast.type === "success"
+                ? "bg-green-400/10 border border-green-400/30 text-green-400"
+                : "bg-zinc-800 border border-zinc-700 text-zinc-100"
+          }`}
         >
           {toast.message}
         </div>
@@ -53,3 +54,5 @@ export function ToastContainer() {
     </div>
   );
 }
+
+export { ToastContainer };

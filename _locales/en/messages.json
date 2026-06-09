@@ -1,0 +1,203 @@
+{
+  "appName": { "message": "BlockSite" },
+  "appDescription": { "message": "Browser website blocker — stay focused" },
+
+  "common_save": { "message": "Save" },
+  "common_cancel": { "message": "Cancel" },
+  "common_delete": { "message": "Delete" },
+  "common_edit": { "message": "Edit" },
+  "common_add": { "message": "Add" },
+  "common_remove": { "message": "Remove" },
+  "common_enable": { "message": "Enable" },
+  "common_disable": { "message": "Disable" },
+  "common_loading": { "message": "Loading..." },
+  "common_retry": { "message": "Retry" },
+  "common_settings": { "message": "Settings" },
+  "common_dashboard": { "message": "Dashboard" },
+
+  "category_social": { "message": "Social Media" },
+  "category_video": { "message": "Video" },
+  "category_game": { "message": "Gaming" },
+  "category_news": { "message": "News" },
+  "category_adult": { "message": "Adult" },
+  "category_custom": { "message": "Custom" },
+
+  "ruleType_domain": { "message": "Domain" },
+  "ruleType_path": { "message": "Path" },
+  "ruleType_keyword": { "message": "Keyword" },
+  "ruleType_regex": { "message": "Regex" },
+  "ruleType_wildcard": { "message": "Wildcard" },
+
+  "popup_title": { "message": "BlockSite" },
+  "popup_blocksToday": {
+    "message": "$COUNT$ blocks today",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "popup_activeRules": { "message": "active rules" },
+  "popup_totalRules": { "message": "total rules" },
+  "popup_currentSite": { "message": "Current Site" },
+  "popup_noSite": { "message": "Unable to detect" },
+  "popup_openSite": { "message": "Open a website to block it" },
+  "popup_blockThisSite": { "message": "Block this site" },
+  "popup_adding": { "message": "Adding..." },
+  "popup_blocked": { "message": "Blocked!" },
+  "popup_alreadyBlocked": { "message": "Already blocked" },
+  "popup_blockedSites": {
+    "message": "Blocked Sites ($COUNT$)",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "popup_noSites": {
+    "message": "No sites blocked yet. Open a site and click \"Block this site\" above."
+  },
+  "popup_paused": { "message": "paused" },
+  "popup_customMessage": { "message": "Custom message (optional)" },
+  "popup_loadFailed": { "message": "Failed to load. Try reloading the extension." },
+
+  "options_title": { "message": "Settings" },
+  "options_tabRules": { "message": "Rules" },
+  "options_tabSchedule": { "message": "Schedule" },
+  "options_tabPresets": { "message": "Presets" },
+  "options_tabPasswords": { "message": "Passwords" },
+  "options_tabExport": { "message": "Import/Export" },
+  "options_rulesTitle": { "message": "Blocking Rules" },
+  "options_rulesDesc": {
+    "message": "$COUNT$ rules · $ACTIVE$ active",
+    "placeholders": { "count": { "content": "$1" }, "active": { "content": "$2" } }
+  },
+  "options_addRule": { "message": "+ Add Rule" },
+  "options_addRuleTitle": { "message": "Add Rule" },
+  "options_matchType": { "message": "Match type" },
+  "options_value": { "message": "Value" },
+  "options_category": { "message": "Category" },
+  "options_customMessage": { "message": "Custom message (optional)" },
+  "options_search": { "message": "Search..." },
+  "options_allTypes": { "message": "All types" },
+  "options_allCategories": { "message": "All categories" },
+  "options_selectAll": { "message": "Select all" },
+  "options_selected": {
+    "message": "$COUNT$ selected",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "options_noRules": { "message": "No rules yet" },
+  "options_noMatchingRules": { "message": "No matching rules" },
+  "options_addFirstRule": { "message": "Add your first rule" },
+  "options_ruleAdded": { "message": "Rule added" },
+  "options_ruleDeleted": {
+    "message": "Deleted $COUNT$ rules",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "options_loadingRules": { "message": "Loading rules..." },
+
+  "options_scheduleTitle": { "message": "Schedule" },
+  "options_scheduleDesc": { "message": "Only block during specific times" },
+  "options_enableSchedule": { "message": "Enable schedule" },
+  "options_addPeriod": { "message": "+ Add time period" },
+  "options_newPeriod": { "message": "New Time Period" },
+  "options_days": { "message": "Days" },
+  "options_loadingSchedule": { "message": "Loading schedule..." },
+  "options_periodAdded": { "message": "Period added" },
+
+  "options_presetsTitle": { "message": "Category Presets" },
+  "options_presetsDesc": { "message": "Predefined sites you can block with one click" },
+  "options_addSite": { "message": "Add site..." },
+  "options_noPresets": { "message": "No presets for this category" },
+
+  "options_passwordTitle": { "message": "Password Protection" },
+  "options_passwordDesc": { "message": "Set per-category unlock passwords" },
+  "options_newPassword": { "message": "New password" },
+  "options_confirmPassword": { "message": "Confirm password" },
+  "options_setPassword": {
+    "message": "Set Password for $CATEGORY$",
+    "placeholders": { "category": { "content": "$1" } }
+  },
+  "options_passwordSaved": { "message": "Saved!" },
+  "options_passwordMismatch": { "message": "Passwords do not match" },
+  "options_passwordEmpty": { "message": "Password cannot be empty" },
+  "options_passwordSetSuccess": {
+    "message": "Password set for $CATEGORY$",
+    "placeholders": { "category": { "content": "$1" } }
+  },
+  "options_passwordSetFailed": { "message": "Failed to set password" },
+
+  "options_exportTitle": { "message": "Import / Export" },
+  "options_exportRules": { "message": "Rules" },
+  "options_exportPresets": { "message": "Presets" },
+  "options_exportSchedule": { "message": "Schedule" },
+  "options_exportAuth": { "message": "Passwords" },
+  "options_exportStats": { "message": "Statistics" },
+  "options_generate": { "message": "Generate" },
+  "options_download": { "message": "Download" },
+  "options_importPlaceholder": { "message": "Paste JSON..." },
+  "options_importButton": { "message": "Import" },
+  "options_importSuccess": { "message": "Import successful" },
+  "options_importFailed": { "message": "Import failed" },
+
+  "blocked_title": { "message": "Site Blocked" },
+  "blocked_unlock": { "message": "Unlock" },
+  "blocked_unlocked": { "message": "Unlocked" },
+  "blocked_expiresSoon": { "message": "Unlock expires soon" },
+  "blocked_extend": { "message": "Extend 5 minutes" },
+  "blocked_extending": { "message": "Extending..." },
+  "blocked_passwordPlaceholder": { "message": "Enter password to unlock temporarily" },
+  "blocked_incorrectPassword": { "message": "Incorrect password" },
+  "blocked_unlocksRemaining": {
+    "message": "$COUNT$ unlocks remaining today",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "blocked_footer": { "message": "BlockSite · Stay focused" },
+  "blocked_defaultQuote": { "message": "Stay focused." },
+
+  "dashboard_title": { "message": "Dashboard" },
+  "dashboard_desc": { "message": "Your blocking statistics" },
+  "dashboard_loading": { "message": "Loading dashboard..." },
+  "dashboard_today": { "message": "Today" },
+  "dashboard_totalBlocks": { "message": "Total Blocks" },
+  "dashboard_activeRules": { "message": "Active Rules" },
+  "dashboard_vsLastWeek": { "message": "vs Last Week" },
+  "dashboard_byCategory": { "message": "By Category" },
+  "dashboard_hourlyDist": { "message": "Hourly Distribution" },
+  "dashboard_topRules": { "message": "Top Rules" },
+  "dashboard_trend": { "message": "Trend" },
+  "dashboard_noData": { "message": "No data yet — start blocking to see stats" },
+  "dashboard_moreBlocks": { "message": "More blocks than last week" },
+  "dashboard_fewerBlocks": { "message": "Fewer blocks than last week" },
+  "dashboard_sameBlocks": { "message": "Same as last week" },
+
+  "quote_social_1": { "message": "True friends aren't behind a screen" },
+  "quote_social_2": { "message": "You're not scrolling time — you're scrolling opportunity" },
+  "quote_social_3": {
+    "message": "Social media algorithms know your weaknesses better than you do"
+  },
+  "quote_social_4": { "message": "Likes won't make you happier, focus will make you fuller" },
+  "quote_social_5": { "message": "Other people's highlight reel is not your daily life" },
+
+  "quote_video_1": { "message": "Watching this video won't change anything" },
+  "quote_video_2": { "message": "The algorithm's end is not fulfillment, it's emptiness" },
+  "quote_video_3": { "message": "The next video won't be better" },
+  "quote_video_4": { "message": "Good content is worth searching for, not being pushed" },
+  "quote_video_5": { "message": "Binge-watching is not rest, it's escape" },
+
+  "quote_game_1": { "message": "Achievements in games don't appear on your resume" },
+  "quote_game_2": { "message": "20 minutes per match, 120 hours per year" },
+  "quote_game_3": { "message": "The life you beat isn't in a game" },
+  "quote_game_4": { "message": "Delayed gratification is the most important adult skill" },
+  "quote_game_5": { "message": "One more match won't make you better" },
+
+  "quote_news_1": { "message": "99% of news is irrelevant to you" },
+  "quote_news_2": { "message": "Information anxiety won't make you more knowledgeable" },
+  "quote_news_3": { "message": "True depth comes from books, not fragmented information" },
+  "quote_news_4": { "message": "24-hour news is industrial pollution of attention" },
+  "quote_news_5": { "message": "Read less news, read more history" },
+
+  "quote_adult_1": { "message": "This is not what you truly need" },
+  "quote_adult_2": { "message": "You deserve healthier entertainment" },
+  "quote_adult_3": { "message": "Brief stimulation won't bring lasting satisfaction" },
+  "quote_adult_4": { "message": "True intimacy isn't behind a screen" },
+  "quote_adult_5": { "message": "Respect yourself, and respect others" },
+
+  "quote_custom_1": { "message": "Stay focused, you can do it" },
+  "quote_custom_2": { "message": "Every act of restraint is progress" },
+  "quote_custom_3": { "message": "Your future is built on moments of focus" },
+  "quote_custom_4": { "message": "Every minute of procrastination is a debt to yourself" },
+  "quote_custom_5": { "message": "Finish first, then relax" }
+}

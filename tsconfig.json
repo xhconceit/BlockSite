@@ -1,18 +1,15 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "jsx": "react-jsx",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "types": ["wxt", "chrome"]
-  },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", ".output"]
+  "extends": "./tsconfig.strict.json",
+  "include": [
+    "globals.d.ts",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "entrypoints/**/*.ts",
+    "entrypoints/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "hooks/**/*.ts",
+    "lib/**/*.ts",
+    "utils/**/*.ts",
+  ],
 }

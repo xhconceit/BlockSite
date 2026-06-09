@@ -1,34 +1,37 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 interface Tab {
-  key: string;
+  id: string;
   label: string;
-  icon?: string;
+  icon?: ReactNode;
 }
 
 interface TabsProps {
   tabs: Tab[];
   activeTab: string;
-  onChange: (key: string) => void;
+  onTabChange: (tabId: string) => void;
 }
 
-export default function Tabs({ tabs, activeTab, onChange }: TabsProps) {
+function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
   return (
-    <div className="flex border-b border-[var(--color-border)]">
+    <div className="flex border-b border-zinc-800">
       {tabs.map((tab) => (
         <button
-          key={tab.key}
-          onClick={() => onChange(tab.key)}
-          className={`px-4 py-2.5 text-sm font-medium transition-colors duration-150 border-b-2 -mb-px cursor-pointer ${
-            activeTab === tab.key
-              ? 'text-[var(--color-primary)] border-[var(--color-primary)]'
-              : 'text-[var(--color-text-muted)] border-transparent hover:text-[var(--color-text)]'
+          key={tab.id}
+          onClick={() => onTabChange(tab.id)}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors duration-150 border-b-2 -mb-px ${
+            activeTab === tab.id
+              ? "border-lime-300 text-lime-300"
+              : "border-transparent text-zinc-400 hover:text-zinc-200"
           }`}
         >
-          {tab.icon && <span className="mr-1.5">{tab.icon}</span>}
+          {tab.icon}
           {tab.label}
         </button>
       ))}
     </div>
   );
 }
+
+export { Tabs };
+export type { TabsProps, Tab };
