@@ -4,8 +4,8 @@ import { Toggle } from "../../components/ui/Toggle";
 import { Select } from "../../components/ui/Select";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
-import { CATEGORIES, CATEGORY_INFO } from "../../packages/core/src";
-import type { Category, BlockedItem, AppConfig } from "../../packages/core/src";
+import { CATEGORY_INFO } from "../../packages/core/src";
+import type { BlockedItem, AppConfig, CategoryInfo } from "../../packages/core/src";
 import { useI18n } from "../../hooks/useI18n";
 
 interface PopupState {
@@ -14,6 +14,7 @@ interface PopupState {
   todayBlocks: number;
   activeRules: number;
   currentUrl: string;
+  categories: Record<string, CategoryInfo>;
 }
 
 export default function App() {
@@ -21,7 +22,7 @@ export default function App() {
   const [state, setState] = useState<PopupState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [quickAddCategory, setQuickAddCategory] = useState<Category>("custom");
+  const [quickAddCategory, setQuickAddCategory] = useState<string>("custom");
   const [quickAddMessage, setQuickAddMessage] = useState("");
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
@@ -45,11 +46,12 @@ export default function App() {
       });
       const rules = resp.rules || [];
       setState({
-        config: resp.config || { enabled: true, autoRecoverMinutes: 30 },
+        config: resp.config || { enabled: true, autoRecoverMinutes: 30, locale: "auto" },
         rules,
         todayBlocks: statsResp?.today || 0,
         activeRules: rules.filter((r: BlockedItem) => r.enabled).length,
         currentUrl: hostname,
+        categories: (resp?.categories as Record<string, CategoryInfo>) ?? {},
       });
       setError("");
     } catch (err) {
@@ -96,6 +98,15 @@ export default function App() {
       setAdding(false);
     }
   }
+
+  function catInfo(key: string): CategoryInfo {
+    return state?.categories?.[key] ?? CATEGORY_INFO[key] ?? CATEGORY_INFO["custom"]!;
+  }
+
+  const categoryOptions = Object.entries(state?.categories ?? {}).map(([key, info]) => ({
+    value: key,
+    label: info.label,
+  }));
 
   if (loading) {
     return (
@@ -197,10 +208,10 @@ export default function App() {
           <div className="flex items-center gap-2">
             <Badge
               color={
-                CATEGORY_INFO[
+                catInfo(
                   state.rules.find((r) => r.type === "domain" && r.value === state.currentUrl)
-                    ?.category ?? "custom"
-                ].themeColor
+                    ?.category ?? "custom",
+                ).themeColor
               }
             >
               {t("popup_alreadyBlocked")}
@@ -209,9 +220,13 @@ export default function App() {
         ) : (
           <div className="space-y-2">
             <Select
-              options={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_INFO[c].label }))}
+              options={
+                categoryOptions.length > 0
+                  ? categoryOptions
+                  : Object.entries(CATEGORY_INFO).map(([k, v]) => ({ value: k, label: v.label }))
+              }
               value={quickAddCategory}
-              onChange={(e) => setQuickAddCategory(e.target.value as Category)}
+              onChange={(e) => setQuickAddCategory(e.target.value)}
               className="flex-1"
             />
             <Input
@@ -241,13 +256,13 @@ export default function App() {
               >
                 <div
                   className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: CATEGORY_INFO[rule.category].themeColor }}
+                  style={{ backgroundColor: catInfo(rule.category).themeColor }}
                 />
                 <span className="text-sm font-mono text-zinc-300 truncate flex-1">
                   {rule.value}
                 </span>
-                <Badge color={CATEGORY_INFO[rule.category].themeColor}>
-                  {CATEGORY_INFO[rule.category].label}
+                <Badge color={catInfo(rule.category).themeColor}>
+                  {catInfo(rule.category).label}
                 </Badge>
                 {!rule.enabled && (
                   <span className="text-[10px] text-zinc-600">{t("popup_paused")}</span>

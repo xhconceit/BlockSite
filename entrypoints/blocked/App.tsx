@@ -97,8 +97,8 @@ export default function App() {
     const category = (params.get("category") || "custom") as Category;
     const customMessage = params.get("customMessage") || "";
 
-    const info = CATEGORY_INFO[category];
-    const quotes = DEFAULT_QUOTES[category] || DEFAULT_QUOTES.custom!;
+    const info = CATEGORY_INFO[category] ?? CATEGORY_INFO["custom"]!;
+    const quotes = DEFAULT_QUOTES[category] || DEFAULT_QUOTES["custom"]!;
     const quote = quotes[Math.floor(Math.random() * quotes.length)];
 
     try {
@@ -195,7 +195,7 @@ export default function App() {
     );
   }
 
-  const info = CATEGORY_INFO[state.category];
+  const info = CATEGORY_INFO[state.category] ?? CATEGORY_INFO["custom"]!;
 
   return (
     <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4 relative overflow-hidden">

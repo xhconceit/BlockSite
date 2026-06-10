@@ -1,6 +1,8 @@
 export type BlockType = "domain" | "path" | "keyword" | "regex" | "wildcard";
 
-export type Category = "social" | "video" | "game" | "news" | "adult" | "custom";
+export type Category = string;
+
+export type BuiltInCategory = "social" | "video" | "game" | "news" | "adult" | "custom";
 
 export interface BlockedItem {
   id: string;
@@ -71,22 +73,24 @@ export interface BlockStatsRecord {
 export interface DailyStats {
   date: string;
   totalBlocks: number;
-  byCategory: Record<Category, number>;
+  byCategory: Record<string, number>;
   byRule: Record<string, number>;
   byHour: Record<number, number>;
 }
 
 export interface CategoryInfo {
-  key: Category;
+  key: string;
   label: string;
   labelEn: string;
   themeColor: string;
   themeColorLight: string;
+  isBuiltIn?: boolean;
 }
 
 export interface AppConfig {
   enabled: boolean;
   autoRecoverMinutes: number;
+  locale: "auto" | "en" | "zh_CN";
 }
 
 export interface EventMap {
@@ -100,11 +104,11 @@ export interface EventMap {
   "schedule:activated": { timestamp: number };
   "schedule:deactivated": { timestamp: number };
   "pomodoro:tick": { cycle: number; type: "work" | "break"; remaining: number };
-  "unlock:granted": { category: Category; until: number };
-  "unlock:expired": { category: Category };
-  "unlock:extended": { category: Category; until: number };
-  "unlock:countReached": { category: Category };
-  "block:recorded": { ruleId: string; category: Category; url: string };
+  "unlock:granted": { category: string; until: number };
+  "unlock:expired": { category: string };
+  "unlock:extended": { category: string; until: number };
+  "unlock:countReached": { category: string };
+  "block:recorded": { ruleId: string; category: string; url: string };
   "toggle:changed": { enabled: boolean };
   "state:changed": { enabled: boolean };
 }

@@ -9,6 +9,7 @@ export const CATEGORY_INFO: Record<Category, CategoryInfo> = {
     labelEn: "Social Media",
     themeColor: "#60A5FA",
     themeColorLight: "#3B82F6",
+    isBuiltIn: true,
   },
   video: {
     key: "video",
@@ -16,6 +17,7 @@ export const CATEGORY_INFO: Record<Category, CategoryInfo> = {
     labelEn: "Video",
     themeColor: "#F87171",
     themeColorLight: "#EF4444",
+    isBuiltIn: true,
   },
   game: {
     key: "game",
@@ -23,6 +25,7 @@ export const CATEGORY_INFO: Record<Category, CategoryInfo> = {
     labelEn: "Gaming",
     themeColor: "#4ADE80",
     themeColorLight: "#22C55E",
+    isBuiltIn: true,
   },
   news: {
     key: "news",
@@ -30,6 +33,7 @@ export const CATEGORY_INFO: Record<Category, CategoryInfo> = {
     labelEn: "News",
     themeColor: "#FBBF24",
     themeColorLight: "#F59E0B",
+    isBuiltIn: true,
   },
   adult: {
     key: "adult",
@@ -37,6 +41,7 @@ export const CATEGORY_INFO: Record<Category, CategoryInfo> = {
     labelEn: "Adult",
     themeColor: "#C084FC",
     themeColorLight: "#A855F7",
+    isBuiltIn: true,
   },
   custom: {
     key: "custom",
@@ -44,12 +49,14 @@ export const CATEGORY_INFO: Record<Category, CategoryInfo> = {
     labelEn: "Custom",
     themeColor: "#818CF8",
     themeColorLight: "#6366F1",
+    isBuiltIn: true,
   },
 };
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
   enabled: true,
   autoRecoverMinutes: 30,
+  locale: "auto",
 };
 
 export const DEFAULT_POMODORO: PomodoroConfig = {

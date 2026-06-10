@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CATEGORIES, CATEGORY_INFO } from "../../packages/core/src";
+import { CATEGORY_INFO } from "../../packages/core/src";
 import type { Category } from "../../packages/core/src";
 
 interface DashData {
@@ -87,19 +87,17 @@ export default function App() {
           <Panel title="By Category">
             {data?.categories ? (
               <div className="space-y-2.5">
-                {CATEGORIES.map((cat) => {
-                  const pct = data.categories[cat] ?? 0;
+                {Object.entries(data.categories).map(([cat, pct]) => {
+                  const info = CATEGORY_INFO[cat] ?? CATEGORY_INFO["custom"]!;
                   return (
                     <div key={cat} className="flex items-center gap-3">
-                      <span className="text-sm text-zinc-400 w-16 shrink-0">
-                        {CATEGORY_INFO[cat].label}
-                      </span>
+                      <span className="text-sm text-zinc-400 w-16 shrink-0">{info.label}</span>
                       <div className="flex-1 h-5 rounded-full bg-zinc-800 overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-700 ease-out"
                           style={{
                             width: `${Math.max(pct, 2)}%`,
-                            backgroundColor: CATEGORY_INFO[cat].themeColor,
+                            backgroundColor: info.themeColor,
                           }}
                         />
                       </div>

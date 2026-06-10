@@ -4,7 +4,13 @@ import { getConfig, saveConfig, isActive } from "../packages/schedule/src";
 import { checkExpiry } from "../packages/unlock/src";
 import { recordBlock } from "../packages/stats/src";
 import { exportData, importData, validateImportData } from "../packages/import-export/src";
-import type { Category, AppConfig, BlockedItem } from "../packages/core/src";
+import {
+  getAllCategoryInfo,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+} from "../packages/categories/src";
+import type { Category, AppConfig, BlockedItem, CategoryInfo } from "../packages/core/src";
 import { DEFAULT_APP_CONFIG } from "../packages/core/src";
 
 const pendingBlockedUrls = new Map<number, string>();
@@ -201,7 +207,8 @@ async function handleMessage(
       const scheduleConfig = await getConfig();
       const { getUnlockState } = await import("../packages/unlock/src");
       const unlockStates = await getUnlockState();
-      return { config, rules, schedule: scheduleConfig, unlockStates };
+      const categories = await getAllCategoryInfo();
+      return { config, rules, schedule: scheduleConfig, unlockStates, categories };
     },
 
     toggleEnabled: async (msg) => {
@@ -226,6 +233,36 @@ async function handleMessage(
       const minutes = msg["minutes"] as number;
       const config = await getAppConfig();
       await settings.set("config", { ...config, autoRecoverMinutes: minutes });
+      return { success: true };
+    },
+
+    setLocale: async (msg) => {
+      const locale = msg["locale"] as string;
+      const config = await getAppConfig();
+      await settings.set("config", { ...config, locale });
+      return { success: true };
+    },
+
+    getCategories: async () => {
+      return getAllCategoryInfo();
+    },
+
+    addCategory: async (msg) => {
+      const info = msg["info"] as CategoryInfo;
+      await addCategory(info);
+      return { success: true };
+    },
+
+    updateCategory: async (msg) => {
+      const key = msg["key"] as string;
+      const info = msg["info"] as Partial<CategoryInfo>;
+      await updateCategory(key, info);
+      return { success: true };
+    },
+
+    deleteCategory: async (msg) => {
+      const key = msg["key"] as string;
+      await deleteCategory(key);
       return { success: true };
     },
 

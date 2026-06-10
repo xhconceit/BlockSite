@@ -1,6 +1,6 @@
-import type { Category, QuoteItem } from "./types";
+import type { QuoteItem } from "./types";
 
-export const DEFAULT_PRESET_SITES: Record<Category, string[]> = {
+export const DEFAULT_PRESET_SITES: Record<string, string[]> = {
   social: [
     "facebook.com",
     "twitter.com",
@@ -29,7 +29,7 @@ export const DEFAULT_PRESET_SITES: Record<Category, string[]> = {
   custom: [] as string[],
 };
 
-export const DEFAULT_QUOTES: Record<Category, QuoteItem[]> = {
+export const DEFAULT_QUOTES: Record<string, QuoteItem[]> = {
   social: [
     { id: "social-1", text: "真正的朋友不在屏幕里", author: "" },
     { id: "social-2", text: "你刷走的不是时间，是机会", author: "" },

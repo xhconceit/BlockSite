@@ -1,9 +1,11 @@
 import type { BlockedItem, ScheduleConfig, QuoteItem, Category } from "@blocksite/core";
+import { CATEGORIES } from "@blocksite/core";
 import {
   rules as rulesRepo,
   presets as presetsRepo,
   schedule as scheduleRepo,
   auth as authRepo,
+  settings,
 } from "@blocksite/storage";
 
 export type ExportCategory = "rules" | "presets" | "schedule" | "auth" | "stats";
@@ -12,9 +14,9 @@ export interface ExportData {
   version: string;
   exportedAt: string;
   rules?: BlockedItem[];
-  presets?: Record<Category, { sites: string[]; quotes: QuoteItem[] }>;
+  presets?: Record<string, { sites: string[]; quotes: QuoteItem[] }>;
   schedule?: ScheduleConfig;
-  auth?: Record<Category, string>;
+  auth?: Record<string, string>;
   stats?: { totalBlocked: number };
 }
 
@@ -23,6 +25,11 @@ export interface ImportResult {
   imported: ExportCategory[];
   errors: string[];
   preview?: ExportData;
+}
+
+async function getAllCategoryKeys(): Promise<string[]> {
+  const custom = ((await settings.get("categories")) as Record<string, unknown>) ?? {};
+  return [...CATEGORIES, ...Object.keys(custom)];
 }
 
 export async function exportData(categories: ExportCategory[]): Promise<string> {
@@ -35,11 +42,8 @@ export async function exportData(categories: ExportCategory[]): Promise<string> 
     data.rules = await rulesRepo.getAll();
   }
   if (categories.includes("presets")) {
-    const cats: Category[] = ["social", "video", "game", "news", "adult", "custom"];
-    const presetsData: Record<Category, { sites: string[]; quotes: QuoteItem[] }> = {} as Record<
-      Category,
-      { sites: string[]; quotes: QuoteItem[] }
-    >;
+    const cats = await getAllCategoryKeys();
+    const presetsData: Record<string, { sites: string[]; quotes: QuoteItem[] }> = {};
     for (const cat of cats) {
       presetsData[cat] = {
         sites: await presetsRepo.getSites(cat),
@@ -52,8 +56,9 @@ export async function exportData(categories: ExportCategory[]): Promise<string> 
     data.schedule = await scheduleRepo.get();
   }
   if (categories.includes("auth")) {
-    const authData = {} as Record<Category, string>;
-    for (const cat of ["social", "video", "game", "news", "adult", "custom"] as Category[]) {
+    const authData: Record<string, string> = {};
+    const cats = await getAllCategoryKeys();
+    for (const cat of cats) {
       const hash = await authRepo.getHash(cat);
       if (hash !== undefined) {
         authData[cat] = hash;

@@ -1,6 +1,7 @@
 export type {
   BlockType,
   Category,
+  BuiltInCategory,
   BlockedItem,
   SchedulePeriod,
   PomodoroConfig,

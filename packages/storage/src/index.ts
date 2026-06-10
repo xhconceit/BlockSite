@@ -140,7 +140,7 @@ export const presets = {
     if (fallbackMode) {
       const fb = await loadFallback();
       const p = (fb["presets"] as Record<string, { sites: string[]; quotes: QuoteItem[] }>) ?? {};
-      p[category] = { ...p[category], sites };
+      p[category] = { sites, quotes: p[category]?.quotes ?? [] };
       fb["presets"] = p;
       await saveFallback(fb);
       return;
@@ -159,7 +159,7 @@ export const presets = {
     if (fallbackMode) {
       const fb = await loadFallback();
       const p = (fb["presets"] as Record<string, { sites: string[]; quotes: QuoteItem[] }>) ?? {};
-      p[category] = { ...p[category], quotes };
+      p[category] = { sites: p[category]?.sites ?? [], quotes };
       fb["presets"] = p;
       await saveFallback(fb);
       return;

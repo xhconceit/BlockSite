@@ -1,9 +1,8 @@
-import type { Category, BlockStatsRecord, DailyStats } from "@blocksite/core";
-import { CATEGORIES } from "@blocksite/core";
+import type { BlockStatsRecord, DailyStats } from "@blocksite/core";
 import { stats as statsRepo } from "@blocksite/storage";
 import { emitter } from "@blocksite/event-bus";
 
-export async function recordBlock(ruleId: string, category: Category, url: string): Promise<void> {
+export async function recordBlock(ruleId: string, category: string, url: string): Promise<void> {
   const record: BlockStatsRecord = {
     id: crypto.randomUUID(),
     ruleId,
@@ -31,14 +30,10 @@ export async function recordBlock(ruleId: string, category: Category, url: strin
 }
 
 function emptyDailyStats(date: string): DailyStats {
-  const byCategory = {} as Record<Category, number>;
-  for (const cat of CATEGORIES) {
-    byCategory[cat] = 0;
-  }
   return {
     date,
     totalBlocks: 0,
-    byCategory,
+    byCategory: {},
     byRule: {},
     byHour: {},
   };
@@ -47,21 +42,18 @@ function emptyDailyStats(date: string): DailyStats {
 export async function getCategoryBreakdown(
   from: string,
   to: string,
-): Promise<Record<Category, number>> {
+): Promise<Record<string, number>> {
   const records = await statsRepo.getAllDailyStats(from, to);
-  const result = {} as Record<Category, number>;
-  for (const cat of CATEGORIES) {
-    result[cat] = 0;
-  }
+  const result: Record<string, number> = {};
   for (const record of records) {
-    for (const cat of CATEGORIES) {
-      result[cat] += record.byCategory[cat] ?? 0;
+    for (const [cat, count] of Object.entries(record.byCategory)) {
+      result[cat] = (result[cat] ?? 0) + (count ?? 0);
     }
   }
   const total = Object.values(result).reduce((sum, v) => sum + v, 0);
   if (total > 0) {
-    for (const cat of CATEGORIES) {
-      result[cat] = Math.round((result[cat] / total) * 100);
+    for (const cat of Object.keys(result)) {
+      result[cat] = Math.round((result[cat]! / total) * 100);
     }
   }
   return result;

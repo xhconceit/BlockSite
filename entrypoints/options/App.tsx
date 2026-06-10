@@ -6,19 +6,60 @@ import { Toggle } from "../../components/ui/Toggle";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { ToastContainer, showToast } from "../../components/ui/Toast";
-import { CATEGORIES, CATEGORY_INFO, BLOCK_TYPE_LABELS } from "../../packages/core/src";
-import type { BlockedItem, Category, BlockType, SchedulePeriod } from "../../packages/core/src";
+import { useI18n } from "../../hooks/useI18n";
+import { CATEGORY_INFO, BLOCK_TYPE_LABELS } from "../../packages/core/src";
+import type { BlockedItem, BlockType, SchedulePeriod, CategoryInfo } from "../../packages/core/src";
 
-const TABS = [
-  { id: "rules", label: "Rules", icon: "#" },
-  { id: "schedule", label: "Schedule", icon: "⏰" },
-  { id: "presets", label: "Presets", icon: "📋" },
-  { id: "password", label: "Passwords", icon: "🔒" },
-  { id: "export", label: "Import/Export", icon: "📦" },
-];
+const TAB_KEYS = [
+  "rules",
+  "schedule",
+  "presets",
+  "password",
+  "categories",
+  "export",
+  "settings",
+] as const;
 
 export default function App() {
   const [tab, setTab] = useState("rules");
+  const { t } = useI18n();
+  const [allCategories, setAllCategories] = useState<Record<string, CategoryInfo>>({
+    ...CATEGORY_INFO,
+  });
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: "getConfig" }).then((resp) => {
+      if (resp?.categories) {
+        setAllCategories({
+          ...CATEGORY_INFO,
+          ...(resp.categories as Record<string, CategoryInfo>),
+        });
+      }
+    });
+  }, []);
+
+  function refreshCategories() {
+    chrome.runtime.sendMessage({ type: "getCategories" }).then((categories) => {
+      if (categories) {
+        setAllCategories({ ...CATEGORY_INFO, ...(categories as Record<string, CategoryInfo>) });
+      }
+    });
+  }
+
+  const categoryOptions = Object.entries(allCategories).map(([key, info]) => ({
+    value: key,
+    label: info.label,
+  }));
+
+  const tabLabels: Record<string, string> = {
+    rules: t("options_tabRules"),
+    schedule: t("options_tabSchedule"),
+    presets: t("options_tabPresets"),
+    password: t("options_tabPasswords"),
+    categories: t("options_tabCategories"),
+    export: t("options_tabExport"),
+    settings: t("options_tabSettings"),
+  };
 
   return (
     <div className="min-h-screen bg-zinc-900 text-zinc-100 flex">
@@ -26,20 +67,20 @@ export default function App() {
       <aside className="w-52 shrink-0 border-r border-zinc-800 flex flex-col">
         <div className="p-4 border-b border-zinc-800">
           <h1 className="text-lg font-bold">BlockSite</h1>
-          <p className="text-xs text-zinc-500">Settings</p>
+          <p className="text-xs text-zinc-500">{t("common_settings")}</p>
         </div>
         <nav className="flex-1 p-2">
-          {TABS.map((t) => (
+          {TAB_KEYS.map((id) => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={id}
+              onClick={() => setTab(id)}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm mb-0.5 transition-colors ${
-                tab === t.id
+                id === tab
                   ? "bg-zinc-800 text-zinc-100 font-medium"
                   : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
               }`}
             >
-              {t.label}
+              {tabLabels[id]}
             </button>
           ))}
         </nav>
@@ -51,11 +92,21 @@ export default function App() {
       {/* Content */}
       <main className="flex-1 overflow-auto">
         <div className="max-w-3xl p-6">
-          {tab === "rules" && <RulesPanel />}
+          {tab === "rules" && (
+            <RulesPanel categoryOptions={categoryOptions} categoryMap={allCategories} />
+          )}
           {tab === "schedule" && <SchedulePanel />}
-          {tab === "presets" && <PresetsPanel />}
-          {tab === "password" && <PasswordPanel />}
+          {tab === "presets" && <PresetsPanel categories={allCategories} />}
+          {tab === "password" && <PasswordPanel categories={allCategories} />}
+          {tab === "categories" && (
+            <CategoriesPanel
+              categories={allCategories}
+              categoryOptions={categoryOptions}
+              onChanged={refreshCategories}
+            />
+          )}
           {tab === "export" && <ExportPanel />}
+          {tab === "settings" && <SettingsPanel />}
         </div>
       </main>
 
@@ -66,7 +117,13 @@ export default function App() {
 
 // ═══ RULES PANEL ═══
 
-function RulesPanel() {
+function RulesPanel({
+  categoryOptions,
+  categoryMap,
+}: {
+  categoryOptions: { value: string; label: string }[];
+  categoryMap: Record<string, CategoryInfo>;
+}) {
   const [rules, setRules] = useState<BlockedItem[]>([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -77,7 +134,7 @@ function RulesPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [addType, setAddType] = useState<BlockType>("domain");
   const [addValue, setAddValue] = useState("");
-  const [addCat, setAddCat] = useState<Category>("custom");
+  const [addCat, setAddCat] = useState<string>("custom");
   const [addMsg, setAddMsg] = useState("");
 
   useEffect(() => {
@@ -216,10 +273,7 @@ function RulesPanel() {
           className="w-32"
         />
         <Select
-          options={[
-            { value: "all", label: "All categories" },
-            ...CATEGORIES.map((c) => ({ value: c, label: CATEGORY_INFO[c].label })),
-          ]}
+          options={[{ value: "all", label: "All categories" }, ...categoryOptions]}
           value={catFilter}
           onChange={(e) => setCatFilter(e.target.value)}
           className="w-36"
@@ -291,8 +345,8 @@ function RulesPanel() {
                   {rule.customMessage}
                 </span>
               )}
-              <Badge color={CATEGORY_INFO[rule.category].themeColor}>
-                {CATEGORY_INFO[rule.category].label}
+              <Badge color={(categoryMap[rule.category] ?? CATEGORY_INFO["custom"])!.themeColor}>
+                {(categoryMap[rule.category] ?? CATEGORY_INFO["custom"])?.label}
               </Badge>
               <span className="text-[11px] text-zinc-600 w-14">{BLOCK_TYPE_LABELS[rule.type]}</span>
               <button
@@ -342,9 +396,9 @@ function RulesPanel() {
           <div>
             <label className="text-sm text-zinc-400 mb-1 block">Category</label>
             <Select
-              options={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_INFO[c].label }))}
+              options={categoryOptions}
               value={addCat}
-              onChange={(e) => setAddCat(e.target.value as Category)}
+              onChange={(e) => setAddCat(e.target.value)}
             />
           </div>
           <div>
@@ -565,13 +619,14 @@ function SchedulePanel() {
 
 // ═══ PRESETS PANEL ═══
 
-function PresetsPanel() {
-  const [cat, setCat] = useState<Category>("social");
+function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo> }) {
+  const catKeys = Object.keys(categories);
+  const [cat, setCat] = useState(catKeys[0] || "social");
   const [sites, setSites] = useState<string[]>([]);
   const [newSite, setNewSite] = useState("");
 
   useEffect(() => {
-    const defaults: Record<Category, string[]> = {
+    const defaults: Record<string, string[]> = {
       social: ["facebook.com", "twitter.com", "instagram.com", "tiktok.com", "weibo.com"],
       video: ["youtube.com", "bilibili.com", "netflix.com", "douyin.com"],
       game: ["steampowered.com", "epicgames.com", "twitch.tv"],
@@ -594,7 +649,7 @@ function PresetsPanel() {
       <p className="text-sm text-zinc-500 mb-6">Predefined sites you can block with one click</p>
 
       <div className="flex flex-wrap gap-1.5 mb-6">
-        {CATEGORIES.map((c) => (
+        {catKeys.map((c) => (
           <button
             key={c}
             onClick={() => setCat(c)}
@@ -602,10 +657,15 @@ function PresetsPanel() {
               cat === c ? "" : "bg-zinc-800/50 text-zinc-400 hover:text-zinc-200"
             }`}
             style={
-              cat === c ? { backgroundColor: CATEGORY_INFO[c].themeColor, color: "#18181b" } : {}
+              cat === c
+                ? {
+                    backgroundColor: (categories[c] ?? CATEGORY_INFO["custom"])?.themeColor,
+                    color: "#18181b",
+                  }
+                : {}
             }
           >
-            {CATEGORY_INFO[c].label}
+            {(categories[c] ?? CATEGORY_INFO["custom"])?.label}
           </button>
         ))}
       </div>
@@ -650,8 +710,9 @@ function PresetsPanel() {
 
 // ═══ PASSWORD PANEL ═══
 
-function PasswordPanel() {
-  const [cat, setCat] = useState<Category>("social");
+function PasswordPanel({ categories }: { categories: Record<string, CategoryInfo> }) {
+  const catKeys = Object.keys(categories);
+  const [cat, setCat] = useState(catKeys[0] || "social");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saved, setSaved] = useState(false);
@@ -674,7 +735,10 @@ function PasswordPanel() {
       setSaved(true);
       setPassword("");
       setConfirm("");
-      showToast(`Password set for ${CATEGORY_INFO[cat].label}`, "success");
+      showToast(
+        `Password set for ${(CATEGORY_INFO[cat] ?? CATEGORY_INFO["custom"])!.label}`,
+        "success",
+      );
       setTimeout(() => setSaved(false), 2000);
     } catch {
       showToast("Failed to set password", "error");
@@ -687,7 +751,7 @@ function PasswordPanel() {
       <p className="text-sm text-zinc-500 mb-6">Set per-category unlock passwords</p>
 
       <div className="flex flex-wrap gap-1.5 mb-6">
-        {CATEGORIES.map((c) => (
+        {catKeys.map((c) => (
           <button
             key={c}
             onClick={() => {
@@ -700,10 +764,15 @@ function PasswordPanel() {
               cat === c ? "" : "bg-zinc-800/50 text-zinc-400 hover:text-zinc-200"
             }`}
             style={
-              cat === c ? { backgroundColor: CATEGORY_INFO[c].themeColor, color: "#18181b" } : {}
+              cat === c
+                ? {
+                    backgroundColor: (categories[c] ?? CATEGORY_INFO["custom"])?.themeColor,
+                    color: "#18181b",
+                  }
+                : {}
             }
           >
-            {CATEGORY_INFO[c].label}
+            {(categories[c] ?? CATEGORY_INFO["custom"])?.label}
           </button>
         ))}
       </div>
@@ -722,7 +791,9 @@ function PasswordPanel() {
           onChange={(e) => setConfirm(e.target.value)}
         />
         <Button className="w-full" onClick={handleSet} disabled={!password || !confirm}>
-          {saved ? "Saved!" : `Set Password for ${CATEGORY_INFO[cat].label}`}
+          {saved
+            ? "Saved!"
+            : `Set Password for ${(categories[cat] ?? CATEGORY_INFO["custom"])?.label}`}
         </Button>
       </div>
     </div>
@@ -835,6 +906,280 @@ function ExportPanel() {
         <Button size="sm" className="mt-2" onClick={handleImport} disabled={!importText.trim()}>
           Import
         </Button>
+      </div>
+    </div>
+  );
+}
+
+// ═══ CATEGORIES PANEL ═══
+
+function CategoriesPanel({
+  categories,
+  categoryOptions,
+  onChanged,
+}: {
+  categories: Record<string, CategoryInfo>;
+  categoryOptions: { value: string; label: string }[];
+  onChanged: () => void;
+}) {
+  const { t } = useI18n();
+  const [showForm, setShowForm] = useState(false);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState("");
+  const [color, setColor] = useState("#60A5FA");
+
+  async function handleAdd() {
+    if (!name.trim() || !nameEn.trim()) return;
+    const key = nameEn.trim().toLowerCase().replace(/\s+/g, "-");
+    try {
+      await chrome.runtime.sendMessage({
+        type: "addCategory",
+        info: {
+          key,
+          label: name.trim(),
+          labelEn: nameEn.trim(),
+          themeColor: color,
+          themeColorLight: color,
+        },
+      });
+      setShowForm(false);
+      setName("");
+      setNameEn("");
+      setColor("#60A5FA");
+      onChanged();
+      showToast(t("options_categoryAdded"), "success");
+    } catch (err) {
+      showToast(String(err), "error");
+    }
+  }
+
+  async function handleEdit() {
+    if (!editingKey || !name.trim()) return;
+    await chrome.runtime.sendMessage({
+      type: "updateCategory",
+      key: editingKey,
+      info: {
+        label: name.trim(),
+        labelEn: nameEn.trim(),
+        themeColor: color,
+        themeColorLight: color,
+      },
+    });
+    setEditingKey(null);
+    setName("");
+    setNameEn("");
+    onChanged();
+    showToast(t("options_categoryUpdated"), "success");
+  }
+
+  function startEdit(key: string) {
+    const info = categories[key] ?? CATEGORY_INFO["custom"];
+    setEditingKey(key);
+    setName(info?.label ?? key);
+    setNameEn(info?.labelEn ?? key);
+    setColor(info?.themeColor ?? "#60A5FA");
+    setShowForm(true);
+  }
+
+  async function handleDelete(key: string) {
+    if (!confirm(`Delete category "${(categories[key] ?? CATEGORY_INFO["custom"])?.label}"?`))
+      return;
+    try {
+      await chrome.runtime.sendMessage({ type: "deleteCategory", key });
+      onChanged();
+      showToast(t("options_categoryDeleted"), "info");
+    } catch (err) {
+      showToast(String(err), "error");
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-semibold">{t("options_categoriesTitle")}</h2>
+          <p className="text-sm text-zinc-500 mt-1">{t("options_categoriesDesc")}</p>
+        </div>
+        <Button
+          onClick={() => {
+            setEditingKey(null);
+            setName("");
+            setNameEn("");
+            setColor("#60A5FA");
+            setShowForm(true);
+          }}
+        >
+          {t("options_addCategory")}
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        {categoryOptions.map(({ value: key, label }) => {
+          const info = categories[key] ?? CATEGORY_INFO["custom"];
+          const isBuiltIn = info?.isBuiltIn ?? false;
+          return (
+            <div
+              key={key}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg bg-zinc-800/50 border border-zinc-700/30"
+            >
+              <div
+                className="w-4 h-4 rounded-full shrink-0"
+                style={{ backgroundColor: info?.themeColor ?? "#818CF8" }}
+              />
+              <span className="flex-1 text-sm">{label}</span>
+              <span className="text-xs text-zinc-500 hidden sm:inline">{info?.labelEn ?? key}</span>
+              {isBuiltIn && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500">
+                  {t("options_builtIn")}
+                </span>
+              )}
+              <button
+                onClick={() => startEdit(key)}
+                className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors"
+              >
+                {t("common_edit")}
+              </button>
+              {!isBuiltIn && (
+                <button
+                  onClick={() => handleDelete(key)}
+                  className="text-xs text-zinc-600 hover:text-red-400 transition-colors"
+                >
+                  {t("common_delete")}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingKey !== null ? t("options_editCategory") : t("options_addCategoryTitle")}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_categoryName")}</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="社交媒体" />
+          </div>
+          <div>
+            <label className="text-sm text-zinc-400 mb-1 block">
+              {t("options_categoryNameEn")}
+            </label>
+            <Input
+              value={nameEn}
+              onChange={(e) => setNameEn(e.target.value)}
+              placeholder="Social Media"
+              disabled={editingKey !== null}
+            />
+          </div>
+          <div>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_categoryColor")}</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent"
+              />
+              <span className="text-xs text-zinc-500 font-mono">{color}</span>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setShowForm(false)} className="flex-1">
+              {t("common_cancel")}
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={editingKey !== null ? handleEdit : handleAdd}
+              disabled={!name.trim() || !nameEn.trim()}
+            >
+              {editingKey !== null ? t("common_save") : t("common_add")}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ═══ SETTINGS PANEL ═══
+
+function SettingsPanel() {
+  const { t, locale, setLocale } = useI18n();
+  const [autoRecover, setAutoRecover] = useState(30);
+  const [enabled, setEnabled] = useState(true);
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: "getConfig" }).then((resp) => {
+      const config = resp?.config as Record<string, unknown> | undefined;
+      if (config) {
+        setAutoRecover((config["autoRecoverMinutes"] as number) ?? 30);
+        setEnabled((config["enabled"] as boolean) ?? true);
+      }
+    });
+  }, []);
+
+  async function handleAutoRecoverChange(val: number) {
+    setAutoRecover(val);
+    await chrome.runtime.sendMessage({ type: "setAutoRecover", minutes: val });
+  }
+
+  async function handleToggle() {
+    const newVal = !enabled;
+    setEnabled(newVal);
+    await chrome.runtime.sendMessage({ type: "toggleEnabled", enabled: newVal });
+  }
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold mb-6">{t("options_settingsTitle")}</h2>
+
+      <div className="space-y-6">
+        <div className="rounded-xl border border-zinc-800 p-4">
+          <h3 className="text-sm font-medium mb-3">{t("options_language")}</h3>
+          <Select
+            options={[
+              { value: "auto", label: t("options_languageAuto") },
+              { value: "en", label: "English" },
+              { value: "zh_CN", label: "中文" },
+            ]}
+            value={locale}
+            onChange={async (e) => {
+              await setLocale(e.target.value as "auto" | "en" | "zh_CN");
+            }}
+          />
+        </div>
+
+        <div className="rounded-xl border border-zinc-800 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">{t("options_globalBlocking")}</h3>
+              <p className="text-xs text-zinc-500 mt-1">{t("options_globalBlockingDesc")}</p>
+            </div>
+            <Toggle checked={enabled} onCheckedChange={handleToggle} />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-zinc-800 p-4">
+          <h3 className="text-sm font-medium mb-1">{t("options_autoRecover")}</h3>
+          <p className="text-xs text-zinc-500 mb-3">{t("options_autoRecoverDesc")}</p>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              className="w-20 text-center"
+              value={String(autoRecover)}
+              onChange={(e) => {
+                const v = parseInt(e.target.value) || 0;
+                handleAutoRecoverChange(Math.max(0, Math.min(480, v)));
+              }}
+              min={0}
+              max={480}
+            />
+            <span className="text-sm text-zinc-400">{t("options_autoRecoverUnit")}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

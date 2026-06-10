@@ -199,5 +199,30 @@
   "quote_custom_2": { "message": "Every act of restraint is progress" },
   "quote_custom_3": { "message": "Your future is built on moments of focus" },
   "quote_custom_4": { "message": "Every minute of procrastination is a debt to yourself" },
-  "quote_custom_5": { "message": "Finish first, then relax" }
+  "quote_custom_5": { "message": "Finish first, then relax" },
+
+  "options_tabSettings": { "message": "Settings" },
+  "options_tabCategories": { "message": "Categories" },
+  "options_settingsTitle": { "message": "Settings" },
+  "options_language": { "message": "Language" },
+  "options_languageAuto": { "message": "Auto (Browser default)" },
+  "options_globalBlocking": { "message": "Global Blocking" },
+  "options_globalBlockingDesc": { "message": "Turn all blocking on or off" },
+  "options_autoRecover": { "message": "Auto-recover" },
+  "options_autoRecoverDesc": {
+    "message": "Automatically re-enable blocking after manually turning it off"
+  },
+  "options_autoRecoverUnit": { "message": "minutes (0 = never)" },
+  "options_categoriesTitle": { "message": "Categories" },
+  "options_categoriesDesc": { "message": "Manage blocking categories" },
+  "options_addCategory": { "message": "+ Add Category" },
+  "options_editCategory": { "message": "Edit Category" },
+  "options_addCategoryTitle": { "message": "Add Category" },
+  "options_categoryName": { "message": "Name (中文)" },
+  "options_categoryNameEn": { "message": "Name (English)" },
+  "options_categoryColor": { "message": "Color" },
+  "options_builtIn": { "message": "Built-in" },
+  "options_categoryAdded": { "message": "Category added" },
+  "options_categoryUpdated": { "message": "Category updated" },
+  "options_categoryDeleted": { "message": "Category deleted" }
 }

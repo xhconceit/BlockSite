@@ -24,21 +24,28 @@ export default defineConfig({
   },
   hooks: {
     "build:done": () => {
-      const manifestPath = resolve(".output/chrome-mv3/manifest.json");
-      const manifest = JSON.parse(require("node:fs").readFileSync(manifestPath, "utf-8"));
-      manifest.default_locale = "en";
-      manifest.options_ui = {
-        page: "options.html",
-        open_in_tab: true,
-      };
-      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-      console.log("  │ options_ui.open_in_tab = true");
+      // Handle both production (.output/chrome-mv3) and dev (.output/chrome-mv3-dev)
+      const outputDirs = [".output/chrome-mv3", ".output/chrome-mv3-dev"];
+      for (const dir of outputDirs) {
+        const outputDir = resolve(dir);
+        const manifestPath = resolve(outputDir, "manifest.json");
+        if (!existsSync(manifestPath)) continue;
 
-      const localesSrc = resolve("_locales");
-      const localesDest = resolve(".output/chrome-mv3/_locales");
-      if (existsSync(localesSrc)) {
-        cpSync(localesSrc, localesDest, { recursive: true });
-        console.log("  │ _locales copied to output");
+        const manifest = JSON.parse(require("node:fs").readFileSync(manifestPath, "utf-8"));
+        manifest.default_locale = "en";
+        manifest.options_ui = {
+          page: "options.html",
+          open_in_tab: true,
+        };
+        writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+        console.log(`  │ options_ui.open_in_tab = true (${dir})`);
+
+        const localesSrc = resolve("_locales");
+        const localesDest = resolve(outputDir, "_locales");
+        if (existsSync(localesSrc)) {
+          cpSync(localesSrc, localesDest, { recursive: true });
+          console.log(`  │ _locales copied to ${dir}`);
+        }
       }
     },
   },

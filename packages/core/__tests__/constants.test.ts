@@ -29,15 +29,15 @@ describe("CATEGORY_INFO", () => {
   it("has info for every category", () => {
     for (const cat of CATEGORIES) {
       expect(CATEGORY_INFO[cat]).toBeDefined();
-      expect(CATEGORY_INFO[cat].key).toBe(cat);
-      expect(CATEGORY_INFO[cat].label).toBeTruthy();
-      expect(CATEGORY_INFO[cat].themeColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
-      expect(CATEGORY_INFO[cat].themeColorLight).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(CATEGORY_INFO[cat]!.key).toBe(cat);
+      expect(CATEGORY_INFO[cat]!.label).toBeTruthy();
+      expect(CATEGORY_INFO[cat]!.themeColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(CATEGORY_INFO[cat]!.themeColorLight).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
   });
 
   it("has different colors for each category", () => {
-    const colors = new Set(CATEGORIES.map((c) => CATEGORY_INFO[c].themeColor));
+    const colors = new Set(CATEGORIES.map((c) => CATEGORY_INFO[c]!.themeColor));
     expect(colors.size).toBe(CATEGORIES.length);
   });
 });
@@ -49,6 +49,10 @@ describe("DEFAULT_APP_CONFIG", () => {
 
   it("has auto-recover of 30 minutes", () => {
     expect(DEFAULT_APP_CONFIG.autoRecoverMinutes).toBe(30);
+  });
+
+  it("has locale auto by default", () => {
+    expect(DEFAULT_APP_CONFIG.locale).toBe("auto");
   });
 });
 
