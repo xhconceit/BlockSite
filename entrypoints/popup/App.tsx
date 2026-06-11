@@ -7,6 +7,7 @@ import { Badge } from "../../components/ui/Badge";
 import { CATEGORY_INFO } from "../../packages/core/src";
 import type { BlockedItem, AppConfig, CategoryInfo } from "../../packages/core/src";
 import { useI18n } from "../../hooks/useI18n";
+import { ToastContainer, showToast } from "../../components/ui/Toast";
 
 interface PopupState {
   config: AppConfig;
@@ -73,6 +74,10 @@ export default function App() {
 
   async function handleQuickAdd() {
     if (!state?.currentUrl) return;
+    if (state.rules.some((r) => r.type === "domain" && r.value === state.currentUrl)) {
+      showToast(t("popup_alreadyBlockedDetail"), "info");
+      return;
+    }
     setAdding(true);
     const item: BlockedItem = {
       id: crypto.randomUUID(),
@@ -103,9 +108,9 @@ export default function App() {
     return state?.categories?.[key] ?? CATEGORY_INFO[key] ?? CATEGORY_INFO["custom"]!;
   }
 
-  const categoryOptions = Object.entries(state?.categories ?? {}).map(([key, info]) => ({
+  const categoryOptions = Object.entries(state?.categories ?? {}).map(([key]) => ({
     value: key,
-    label: info.label,
+    label: t(`category_${key}`),
   }));
 
   if (loading) {
@@ -223,7 +228,10 @@ export default function App() {
               options={
                 categoryOptions.length > 0
                   ? categoryOptions
-                  : Object.entries(CATEGORY_INFO).map(([k, v]) => ({ value: k, label: v.label }))
+                  : Object.entries(CATEGORY_INFO).map(([k]) => ({
+                      value: k,
+                      label: t(`category_${k}`),
+                    }))
               }
               value={quickAddCategory}
               onChange={(e) => setQuickAddCategory(e.target.value)}
@@ -262,7 +270,7 @@ export default function App() {
                   {rule.value}
                 </span>
                 <Badge color={catInfo(rule.category).themeColor}>
-                  {catInfo(rule.category).label}
+                  {t(`category_${rule.category}`)}
                 </Badge>
                 {!rule.enabled && (
                   <span className="text-[10px] text-zinc-600">{t("popup_paused")}</span>
@@ -289,6 +297,7 @@ export default function App() {
           {t("common_dashboard")}
         </button>
       </footer>
+      <ToastContainer />
     </div>
   );
 }

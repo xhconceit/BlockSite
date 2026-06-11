@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useI18n } from "../../hooks/useI18n";
 import { CATEGORY_INFO } from "../../packages/core/src";
 import type { Category } from "../../packages/core/src";
 
@@ -16,6 +17,7 @@ function fmt(d: Date): string {
 }
 
 export default function App() {
+  const { t } = useI18n();
   const [data, setData] = useState<DashData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +51,7 @@ export default function App() {
       <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-lime-300 border-t-transparent rounded-full animate-spin" />
-          <p className="text-zinc-500 text-sm">Loading dashboard...</p>
+          <p className="text-zinc-500 text-sm">{t("dashboard_loading")}</p>
         </div>
       </div>
     );
@@ -62,17 +64,21 @@ export default function App() {
       <div className="max-w-5xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-zinc-500 mt-1">Your blocking statistics</p>
+          <h1 className="text-2xl font-bold">{t("dashboard_title")}</h1>
+          <p className="text-sm text-zinc-500 mt-1">{t("dashboard_desc")}</p>
         </div>
 
         {/* Summary cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          <Card label="Today" value={String(data?.today ?? 0)} color="#60A5FA" />
-          <Card label="Total Blocks" value={String(data?.total ?? 0)} color="#4ADE80" />
-          <Card label="Active Rules" value="—" color="#FBBF24" />
+          <Card label={t("dashboard_today")} value={String(data?.today ?? 0)} color="#60A5FA" />
           <Card
-            label="vs Last Week"
+            label={t("dashboard_totalBlocks")}
+            value={String(data?.total ?? 0)}
+            color="#4ADE80"
+          />
+          <Card label={t("dashboard_activeRules")} value="—" color="#FBBF24" />
+          <Card
+            label={t("dashboard_vsLastWeek")}
             value={
               data?.trend
                 ? `${data.trend.changePercent > 0 ? "+" : ""}${data.trend.changePercent}%`
@@ -84,14 +90,16 @@ export default function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Category breakdown */}
-          <Panel title="By Category">
+          <Panel title={t("dashboard_byCategory")}>
             {data?.categories ? (
               <div className="space-y-2.5">
                 {Object.entries(data.categories).map(([cat, pct]) => {
                   const info = CATEGORY_INFO[cat] ?? CATEGORY_INFO["custom"]!;
                   return (
                     <div key={cat} className="flex items-center gap-3">
-                      <span className="text-sm text-zinc-400 w-16 shrink-0">{info.label}</span>
+                      <span className="text-sm text-zinc-400 w-16 shrink-0">
+                        {t(`category_${cat}`)}
+                      </span>
                       <div className="flex-1 h-5 rounded-full bg-zinc-800 overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-700 ease-out"
@@ -109,12 +117,12 @@ export default function App() {
                 })}
               </div>
             ) : (
-              <Empty />
+              <Empty t={t} />
             )}
           </Panel>
 
           {/* Hourly heatmap */}
-          <Panel title="Hourly Distribution">
+          <Panel title={t("dashboard_hourlyDist")}>
             <div className="flex items-end gap-[2px] h-36">
               {Array.from({ length: 24 }, (_, h) => {
                 const count = data?.hourly?.[h] ?? 0;
@@ -143,7 +151,7 @@ export default function App() {
           </Panel>
 
           {/* Rule ranking */}
-          <Panel title="Top Rules">
+          <Panel title={t("dashboard_topRules")}>
             {data?.ranking && data.ranking.length > 0 ? (
               <div className="space-y-0.5">
                 {data.ranking.slice(0, 8).map((item, i) => (
@@ -164,12 +172,12 @@ export default function App() {
                 ))}
               </div>
             ) : (
-              <Empty />
+              <Empty t={t} />
             )}
           </Panel>
 
           {/* Trend */}
-          <Panel title="Week-over-Week Trend">
+          <Panel title={t("dashboard_trend")}>
             {data?.trend ? (
               <div className="flex items-center justify-center h-32">
                 <div className="text-center">
@@ -181,15 +189,15 @@ export default function App() {
                   </div>
                   <p className="text-sm text-zinc-500 mt-2">
                     {data.trend.changePercent > 0
-                      ? "More blocks than last week"
+                      ? t("dashboard_moreBlocks")
                       : data.trend.changePercent < 0
-                        ? "Fewer blocks than last week"
-                        : "Same as last week"}
+                        ? t("dashboard_fewerBlocks")
+                        : t("dashboard_sameBlocks")}
                   </p>
                 </div>
               </div>
             ) : (
-              <Empty />
+              <Empty t={t} />
             )}
           </Panel>
         </div>
@@ -218,10 +226,10 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Empty() {
+function Empty({ t }: { t: (key: string) => string }) {
   return (
     <div className="flex items-center justify-center h-32 text-zinc-600 text-sm">
-      No data yet — start blocking to see stats
+      {t("dashboard_noData")}
     </div>
   );
 }

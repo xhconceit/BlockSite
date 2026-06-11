@@ -134,7 +134,13 @@ export async function importData(
           await rulesRepo.bulkDelete(existing.map((r) => r.id));
         }
       }
+      const existingRules = mode === "merge" ? await rulesRepo.getAll() : [];
+      const existingKeys = new Set(existingRules.map((r) => `${r.type}:${r.value}`));
       for (const rule of data.rules) {
+        const key = `${rule.type || "domain"}:${rule.value || ""}`;
+        if (mode === "merge" && existingKeys.has(key)) {
+          continue;
+        }
         await rulesRepo.put({
           ...rule,
           id: rule.id || crypto.randomUUID(),
@@ -147,6 +153,7 @@ export async function importData(
           createdAt: rule.createdAt || Date.now(),
           updatedAt: Date.now(),
         });
+        if (mode === "merge") existingKeys.add(key);
       }
       imported.push("rules");
     }

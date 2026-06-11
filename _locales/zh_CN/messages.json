@@ -218,5 +218,39 @@
   "options_builtIn": { "message": "内置" },
   "options_categoryAdded": { "message": "分类已添加" },
   "options_categoryUpdated": { "message": "分类已更新" },
-  "options_categoryDeleted": { "message": "分类已删除" }
+  "options_categoryDeleted": { "message": "分类已删除" },
+
+  "options_ruleUpdated": { "message": "规则已更新" },
+  "options_editRule": { "message": "编辑规则" },
+  "options_valuePlaceholder_domain": { "message": "例如 facebook.com" },
+  "options_valuePlaceholder_keyword": { "message": "例如 game" },
+  "options_valuePlaceholder_wildcard": { "message": "例如 *.example.com" },
+  "options_valuePlaceholder_regex": { "message": "例如 .*\\.torrent\\..*" },
+  "options_customMessagePlaceholder": { "message": "在拦截页面显示此消息代替名言" },
+  "options_to": { "message": "至" },
+  "options_export": { "message": "导出" },
+  "options_import": { "message": "导入" },
+  "options_exportGenerate": { "message": "生成" },
+  "options_exportDownload": { "message": "下载" },
+  "schedule_monday": { "message": "周一" },
+  "schedule_tuesday": { "message": "周二" },
+  "schedule_wednesday": { "message": "周三" },
+  "schedule_thursday": { "message": "周四" },
+  "schedule_friday": { "message": "周五" },
+  "schedule_saturday": { "message": "周六" },
+  "schedule_sunday": { "message": "周日" },
+  "settings_langEn": { "message": "English" },
+  "settings_langZhCN": { "message": "中文" },
+  "blocked_failedToUnlock": { "message": "解锁失败" },
+  "options_duplicateRule": { "message": "规则已存在" },
+  "options_deduplicate": { "message": "去重" },
+  "options_deduplicated": {
+    "message": "已移除 $COUNT$ 条重复规则",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "popup_alreadyBlockedDetail": { "message": "该网站已被拦截" },
+  "options_deleteCategoryConfirm": {
+    "message": "删除分类「$CATEGORY$」？",
+    "placeholders": { "category": { "content": "$1" } }
+  }
 }

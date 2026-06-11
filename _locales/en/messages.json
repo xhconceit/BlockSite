@@ -224,5 +224,41 @@
   "options_builtIn": { "message": "Built-in" },
   "options_categoryAdded": { "message": "Category added" },
   "options_categoryUpdated": { "message": "Category updated" },
-  "options_categoryDeleted": { "message": "Category deleted" }
+  "options_categoryDeleted": { "message": "Category deleted" },
+
+  "options_ruleUpdated": { "message": "Rule updated" },
+  "options_editRule": { "message": "Edit Rule" },
+  "options_valuePlaceholder_domain": { "message": "e.g. facebook.com" },
+  "options_valuePlaceholder_keyword": { "message": "e.g. game" },
+  "options_valuePlaceholder_wildcard": { "message": "e.g. *.example.com" },
+  "options_valuePlaceholder_regex": { "message": "e.g. .*\\.torrent\\..*" },
+  "options_customMessagePlaceholder": {
+    "message": "Show this instead of a quote on the blocked page"
+  },
+  "options_to": { "message": "to" },
+  "options_export": { "message": "Export" },
+  "options_import": { "message": "Import" },
+  "options_exportGenerate": { "message": "Generate" },
+  "options_exportDownload": { "message": "Download" },
+  "schedule_monday": { "message": "Mon" },
+  "schedule_tuesday": { "message": "Tue" },
+  "schedule_wednesday": { "message": "Wed" },
+  "schedule_thursday": { "message": "Thu" },
+  "schedule_friday": { "message": "Fri" },
+  "schedule_saturday": { "message": "Sat" },
+  "schedule_sunday": { "message": "Sun" },
+  "settings_langEn": { "message": "English" },
+  "settings_langZhCN": { "message": "中文" },
+  "blocked_failedToUnlock": { "message": "Failed to unlock" },
+  "options_duplicateRule": { "message": "Rule already exists" },
+  "options_deduplicate": { "message": "Deduplicate" },
+  "options_deduplicated": {
+    "message": "Removed $COUNT$ duplicates",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "popup_alreadyBlockedDetail": { "message": "This site is already blocked" },
+  "options_deleteCategoryConfirm": {
+    "message": "Delete category \"$CATEGORY$\"?",
+    "placeholders": { "category": { "content": "$1" } }
+  }
 }

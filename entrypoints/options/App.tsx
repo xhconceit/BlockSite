@@ -46,9 +46,9 @@ export default function App() {
     });
   }
 
-  const categoryOptions = Object.entries(allCategories).map(([key, info]) => ({
+  const categoryOptions = Object.entries(allCategories).map(([key]) => ({
     value: key,
-    label: info.label,
+    label: t(`category_${key}`),
   }));
 
   const tabLabels: Record<string, string> = {
@@ -124,6 +124,7 @@ function RulesPanel({
   categoryOptions: { value: string; label: string }[];
   categoryMap: Record<string, CategoryInfo>;
 }) {
+  const { t } = useI18n();
   const [rules, setRules] = useState<BlockedItem[]>([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -190,12 +191,17 @@ function RulesPanel({
           : r,
       );
       await saveRules(updated);
-      showToast("Rule updated", "success");
+      showToast(t("options_ruleUpdated"), "success");
     } else {
+      const trimmedValue = addValue.trim();
+      if (rules.some((r) => r.type === addType && r.value === trimmedValue)) {
+        showToast(t("options_duplicateRule"), "error");
+        return;
+      }
       const rule: BlockedItem = {
         id: crypto.randomUUID(),
         type: addType,
-        value: addValue.trim(),
+        value: trimmedValue,
         enabled: true,
         category: addCat,
         customMessage: addMsg.trim(),
@@ -204,7 +210,7 @@ function RulesPanel({
         updatedAt: Date.now(),
       };
       await saveRules([...rules, rule]);
-      showToast("Rule added", "success");
+      showToast(t("options_ruleAdded"), "success");
     }
     setShowForm(false);
     setAddValue("");
@@ -222,7 +228,24 @@ function RulesPanel({
     const updated = rules.filter((r) => !selected.has(r.id));
     await saveRules(updated);
     setSelected(new Set());
-    showToast(`Deleted ${selected.size} rules`, "info");
+    showToast(t("options_ruleDeleted", [String(selected.size)]), "info");
+  }
+
+  async function deduplicateRules() {
+    const seen = new Map<string, BlockedItem>();
+    const duplicates: string[] = [];
+    for (const r of rules) {
+      const key = `${r.type}:${r.value}`;
+      if (seen.has(key)) {
+        duplicates.push(r.id);
+      } else {
+        seen.set(key, r);
+      }
+    }
+    if (duplicates.length === 0) return;
+    const updated = rules.filter((r) => !duplicates.includes(r.id));
+    await saveRules(updated);
+    showToast(t("options_deduplicated", [String(duplicates.length)]), "success");
   }
 
   const filtered = rules.filter((r) => {
@@ -238,7 +261,7 @@ function RulesPanel({
     return (
       <div className="flex items-center gap-3 py-8">
         <div className="w-5 h-5 border-2 border-lime-300 border-t-transparent rounded-full animate-spin" />
-        <span className="text-zinc-500">Loading rules...</span>
+        <span className="text-zinc-500">{t("options_loadingRules")}</span>
       </div>
     );
   }
@@ -247,33 +270,41 @@ function RulesPanel({
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold">Blocking Rules</h2>
+          <h2 className="text-xl font-semibold">{t("options_rulesTitle")}</h2>
           <p className="text-sm text-zinc-500 mt-1">
-            {rules.length} rules · {rules.filter((r) => r.enabled).length} active
+            {t("options_rulesDesc", [
+              String(rules.length),
+              String(rules.filter((r) => r.enabled).length),
+            ])}
           </p>
         </div>
-        <Button onClick={startAdd}>+ Add Rule</Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={deduplicateRules}>
+            {t("options_deduplicate")}
+          </Button>
+          <Button onClick={startAdd}>{t("options_addRule")}</Button>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="flex gap-2 mb-4">
         <Input
-          placeholder="Search..."
+          placeholder={t("options_search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1"
         />
         <Select
           options={[
-            { value: "all", label: "All types" },
-            ...Object.entries(BLOCK_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l })),
+            { value: "all", label: t("options_allTypes") },
+            ...Object.keys(BLOCK_TYPE_LABELS).map((v) => ({ value: v, label: t(`ruleType_${v}`) })),
           ]}
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
           className="w-32"
         />
         <Select
-          options={[{ value: "all", label: "All categories" }, ...categoryOptions]}
+          options={[{ value: "all", label: t("options_allCategories") }, ...categoryOptions]}
           value={catFilter}
           onChange={(e) => setCatFilter(e.target.value)}
           className="w-36"
@@ -283,15 +314,17 @@ function RulesPanel({
       {/* Batch bar */}
       {selected.size > 0 && (
         <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
-          <span className="text-sm text-zinc-400">{selected.size} selected</span>
+          <span className="text-sm text-zinc-400">
+            {t("options_selected", [String(selected.size)])}
+          </span>
           <Button variant="ghost" size="sm" onClick={() => {}}>
-            Enable
+            {t("common_enable")}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => {}}>
-            Disable
+            {t("common_disable")}
           </Button>
           <Button variant="destructive" size="sm" onClick={deleteSelected}>
-            Delete
+            {t("common_delete")}
           </Button>
         </div>
       )}
@@ -305,17 +338,17 @@ function RulesPanel({
             onChange={() => setSelected(allSel ? new Set() : new Set(filtered.map((r) => r.id)))}
             className="rounded"
           />
-          Select all
+          {t("options_selectAll")}
         </label>
 
         {filtered.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-zinc-600 mb-2">
-              {rules.length === 0 ? "No rules yet" : "No matching rules"}
+              {rules.length === 0 ? t("options_noRules") : t("options_noMatchingRules")}
             </p>
             {rules.length === 0 && (
               <Button variant="ghost" size="sm" onClick={startAdd}>
-                Add your first rule
+                {t("options_addFirstRule")}
               </Button>
             )}
           </div>
@@ -346,14 +379,14 @@ function RulesPanel({
                 </span>
               )}
               <Badge color={(categoryMap[rule.category] ?? CATEGORY_INFO["custom"])!.themeColor}>
-                {(categoryMap[rule.category] ?? CATEGORY_INFO["custom"])?.label}
+                {t(`category_${rule.category}`)}
               </Badge>
-              <span className="text-[11px] text-zinc-600 w-14">{BLOCK_TYPE_LABELS[rule.type]}</span>
+              <span className="text-[11px] text-zinc-600 w-14">{t(`ruleType_${rule.type}`)}</span>
               <button
                 onClick={() => startEdit(rule)}
                 className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors px-1"
               >
-                Edit
+                {t("common_edit")}
               </button>
               <Toggle checked={rule.enabled} onCheckedChange={() => toggleRule(rule.id)} />
             </div>
@@ -365,36 +398,31 @@ function RulesPanel({
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
-        title={editingId !== null ? "Edit Rule" : "Add Rule"}
+        title={editingId !== null ? t("options_editRule") : t("options_addRuleTitle")}
       >
         <div className="space-y-4">
           <div>
-            <label className="text-sm text-zinc-400 mb-1 block">Match type</label>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_matchType")}</label>
             <Select
-              options={Object.entries(BLOCK_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))}
+              options={Object.keys(BLOCK_TYPE_LABELS).map((v) => ({
+                value: v,
+                label: t(`ruleType_${v}`),
+              }))}
               value={addType}
               onChange={(e) => setAddType(e.target.value as BlockType)}
             />
           </div>
           <div>
-            <label className="text-sm text-zinc-400 mb-1 block">Value</label>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_value")}</label>
             <Input
-              placeholder={
-                addType === "domain"
-                  ? "e.g. facebook.com"
-                  : addType === "keyword"
-                    ? "e.g. game"
-                    : addType === "wildcard"
-                      ? "e.g. *.example.com"
-                      : "e.g. .*.torrent.*"
-              }
+              placeholder={t(`options_valuePlaceholder_${addType}`)}
               value={addValue}
               onChange={(e) => setAddValue(e.target.value)}
               autoFocus
             />
           </div>
           <div>
-            <label className="text-sm text-zinc-400 mb-1 block">Category</label>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_category")}</label>
             <Select
               options={categoryOptions}
               value={addCat}
@@ -402,19 +430,19 @@ function RulesPanel({
             />
           </div>
           <div>
-            <label className="text-sm text-zinc-400 mb-1 block">Custom message (optional)</label>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_customMessage")}</label>
             <Input
-              placeholder="Show this instead of a quote on the blocked page"
+              placeholder={t("options_customMessagePlaceholder")}
               value={addMsg}
               onChange={(e) => setAddMsg(e.target.value)}
             />
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="ghost" onClick={() => setShowForm(false)} className="flex-1">
-              Cancel
+              {t("common_cancel")}
             </Button>
             <Button className="flex-1" onClick={saveRule} disabled={!addValue.trim()}>
-              {editingId !== null ? "Save" : "Add Rule"}
+              {editingId !== null ? t("common_save") : t("options_addRule")}
             </Button>
           </div>
         </div>
@@ -426,6 +454,7 @@ function RulesPanel({
 // ═══ SCHEDULE PANEL ═══
 
 function SchedulePanel() {
+  const { t } = useI18n();
   const [enabled, setEnabled] = useState(false);
   const [periods, setPeriods] = useState<SchedulePeriod[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -436,7 +465,15 @@ function SchedulePanel() {
   const [endM, setEndM] = useState(0);
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
 
-  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const DAY_KEYS = [
+    "schedule_monday",
+    "schedule_tuesday",
+    "schedule_wednesday",
+    "schedule_thursday",
+    "schedule_friday",
+    "schedule_saturday",
+    "schedule_sunday",
+  ];
 
   useEffect(() => {
     chrome.runtime.sendMessage({ type: "getConfig" }).then((resp) => {
@@ -474,7 +511,7 @@ function SchedulePanel() {
     };
     save([...periods, period], enabled);
     setShowAdd(false);
-    showToast("Period added", "success");
+    showToast(t("options_periodAdded"), "success");
   }
 
   function removePeriod(id: string) {
@@ -492,7 +529,7 @@ function SchedulePanel() {
     return (
       <div className="flex items-center gap-3 py-8">
         <div className="w-5 h-5 border-2 border-lime-300 border-t-transparent rounded-full animate-spin" />
-        <span className="text-zinc-500">Loading schedule...</span>
+        <span className="text-zinc-500">{t("options_loadingSchedule")}</span>
       </div>
     );
   }
@@ -501,13 +538,13 @@ function SchedulePanel() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold">Schedule</h2>
-          <p className="text-sm text-zinc-500 mt-1">Only block during specific times</p>
+          <h2 className="text-xl font-semibold">{t("options_scheduleTitle")}</h2>
+          <p className="text-sm text-zinc-500 mt-1">{t("options_scheduleDesc")}</p>
         </div>
         <Toggle
           checked={enabled}
           onCheckedChange={(v) => save(periods, v)}
-          label="Enable schedule"
+          label={t("options_enableSchedule")}
         />
       </div>
 
@@ -524,13 +561,15 @@ function SchedulePanel() {
                 {String(p.endHour).padStart(2, "0")}:{String(p.endMinute).padStart(2, "0")}
               </span>
               <span className="text-xs text-zinc-500 flex-1">
-                {DAYS.filter((_, i) => p.days.includes(i + 1)).join(", ")}
+                {DAY_KEYS.filter((_, i) => p.days.includes(i + 1))
+                  .map((k) => t(k))
+                  .join(", ")}
               </span>
               <button
                 onClick={() => removePeriod(p.id)}
                 className="text-zinc-600 hover:text-red-400 transition-colors text-sm"
               >
-                Remove
+                {t("common_remove")}
               </button>
             </div>
           ))}
@@ -539,11 +578,11 @@ function SchedulePanel() {
 
       {!showAdd ? (
         <Button variant="outline" onClick={() => setShowAdd(true)}>
-          + Add time period
+          {t("options_addPeriod")}
         </Button>
       ) : (
         <div className="rounded-xl border border-zinc-700 p-4 space-y-4 bg-zinc-800/30">
-          <h3 className="font-medium text-sm">New Time Period</h3>
+          <h3 className="font-medium text-sm">{t("options_newPeriod")}</h3>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1">
               <Input
@@ -562,7 +601,7 @@ function SchedulePanel() {
                 }
               />
             </div>
-            <span className="text-zinc-600">to</span>
+            <span className="text-zinc-600">{t("options_to")}</span>
             <div className="flex items-center gap-1">
               <Input
                 className="w-14 text-center"
@@ -578,9 +617,9 @@ function SchedulePanel() {
             </div>
           </div>
           <div>
-            <p className="text-xs text-zinc-500 mb-2">Days</p>
+            <p className="text-xs text-zinc-500 mb-2">{t("options_days")}</p>
             <div className="flex gap-1">
-              {DAYS.map((label, i) => {
+              {DAY_KEYS.map((key, i) => {
                 const d = i + 1;
                 const active = days.includes(d);
                 return (
@@ -593,7 +632,7 @@ function SchedulePanel() {
                         : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
                     }`}
                   >
-                    {label}
+                    {t(key)}
                   </button>
                 );
               })}
@@ -601,14 +640,14 @@ function SchedulePanel() {
           </div>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("common_cancel")}
             </Button>
             <Button
               size="sm"
               onClick={addPeriod}
               disabled={days.length === 0 || startH * 60 + startM >= endH * 60 + endM}
             >
-              Add
+              {t("common_add")}
             </Button>
           </div>
         </div>
@@ -620,6 +659,7 @@ function SchedulePanel() {
 // ═══ PRESETS PANEL ═══
 
 function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo> }) {
+  const { t } = useI18n();
   const catKeys = Object.keys(categories);
   const [cat, setCat] = useState(catKeys[0] || "social");
   const [sites, setSites] = useState<string[]>([]);
@@ -645,8 +685,8 @@ function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo>
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-2">Category Presets</h2>
-      <p className="text-sm text-zinc-500 mb-6">Predefined sites you can block with one click</p>
+      <h2 className="text-xl font-semibold mb-2">{t("options_presetsTitle")}</h2>
+      <p className="text-sm text-zinc-500 mb-6">{t("options_presetsDesc")}</p>
 
       <div className="flex flex-wrap gap-1.5 mb-6">
         {catKeys.map((c) => (
@@ -665,7 +705,7 @@ function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo>
                 : {}
             }
           >
-            {(categories[c] ?? CATEGORY_INFO["custom"])?.label}
+            {t(`category_${c}`)}
           </button>
         ))}
       </div>
@@ -673,19 +713,19 @@ function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo>
       <div className="rounded-xl border border-zinc-800 p-4 mb-4">
         <div className="flex gap-2 mb-4">
           <Input
-            placeholder="Add site..."
+            placeholder={t("options_addSite")}
             value={newSite}
             onChange={(e) => setNewSite(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addSite()}
           />
           <Button size="sm" onClick={addSite} disabled={!newSite.trim()}>
-            Add
+            {t("common_add")}
           </Button>
         </div>
 
         <div className="space-y-1">
           {sites.length === 0 ? (
-            <p className="text-zinc-600 text-sm py-4 text-center">No presets for this category</p>
+            <p className="text-zinc-600 text-sm py-4 text-center">{t("options_noPresets")}</p>
           ) : (
             sites.map((site) => (
               <div
@@ -697,7 +737,7 @@ function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo>
                   className="text-zinc-600 hover:text-red-400 transition-colors text-xs"
                   onClick={() => setSites(sites.filter((s) => s !== site))}
                 >
-                  Remove
+                  {t("common_remove")}
                 </button>
               </div>
             ))
@@ -711,6 +751,7 @@ function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo>
 // ═══ PASSWORD PANEL ═══
 
 function PasswordPanel({ categories }: { categories: Record<string, CategoryInfo> }) {
+  const { t } = useI18n();
   const catKeys = Object.keys(categories);
   const [cat, setCat] = useState(catKeys[0] || "social");
   const [password, setPassword] = useState("");
@@ -719,11 +760,11 @@ function PasswordPanel({ categories }: { categories: Record<string, CategoryInfo
 
   async function handleSet() {
     if (password !== confirm) {
-      showToast("Passwords do not match", "error");
+      showToast(t("options_passwordMismatch"), "error");
       return;
     }
     if (password.length < 1) {
-      showToast("Password cannot be empty", "error");
+      showToast(t("options_passwordEmpty"), "error");
       return;
     }
     try {
@@ -735,20 +776,17 @@ function PasswordPanel({ categories }: { categories: Record<string, CategoryInfo
       setSaved(true);
       setPassword("");
       setConfirm("");
-      showToast(
-        `Password set for ${(CATEGORY_INFO[cat] ?? CATEGORY_INFO["custom"])!.label}`,
-        "success",
-      );
+      showToast(t("options_passwordSetSuccess", [t(`category_${cat}`)]), "success");
       setTimeout(() => setSaved(false), 2000);
     } catch {
-      showToast("Failed to set password", "error");
+      showToast(t("options_passwordSetFailed"), "error");
     }
   }
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-2">Password Protection</h2>
-      <p className="text-sm text-zinc-500 mb-6">Set per-category unlock passwords</p>
+      <h2 className="text-xl font-semibold mb-2">{t("options_passwordTitle")}</h2>
+      <p className="text-sm text-zinc-500 mb-6">{t("options_passwordDesc")}</p>
 
       <div className="flex flex-wrap gap-1.5 mb-6">
         {catKeys.map((c) => (
@@ -772,7 +810,7 @@ function PasswordPanel({ categories }: { categories: Record<string, CategoryInfo
                 : {}
             }
           >
-            {(categories[c] ?? CATEGORY_INFO["custom"])?.label}
+            {t(`category_${c}`)}
           </button>
         ))}
       </div>
@@ -780,20 +818,18 @@ function PasswordPanel({ categories }: { categories: Record<string, CategoryInfo
       <div className="max-w-sm space-y-3">
         <Input
           type="password"
-          placeholder="New password"
+          placeholder={t("options_newPassword")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <Input
           type="password"
-          placeholder="Confirm password"
+          placeholder={t("options_confirmPassword")}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
         />
         <Button className="w-full" onClick={handleSet} disabled={!password || !confirm}>
-          {saved
-            ? "Saved!"
-            : `Set Password for ${(categories[cat] ?? CATEGORY_INFO["custom"])?.label}`}
+          {saved ? t("options_passwordSaved") : t("options_setPassword", [t(`category_${cat}`)])}
         </Button>
       </div>
     </div>
@@ -803,16 +839,17 @@ function PasswordPanel({ categories }: { categories: Record<string, CategoryInfo
 // ═══ EXPORT PANEL ═══
 
 function ExportPanel() {
+  const { t } = useI18n();
   const [sel, setSel] = useState<Set<string>>(new Set(["rules"]));
   const [preview, setPreview] = useState("");
   const [importText, setImportText] = useState("");
 
   const cats = [
-    { id: "rules", label: "Rules" },
-    { id: "presets", label: "Presets" },
-    { id: "schedule", label: "Schedule" },
-    { id: "auth", label: "Passwords" },
-    { id: "stats", label: "Statistics" },
+    { id: "rules", label: t("options_exportRules") },
+    { id: "presets", label: t("options_exportPresets") },
+    { id: "schedule", label: t("options_exportSchedule") },
+    { id: "auth", label: t("options_exportAuth") },
+    { id: "stats", label: t("options_exportStats") },
   ];
 
   async function handleExport() {
@@ -840,23 +877,23 @@ function ExportPanel() {
         mode: "merge",
       });
       if (result?.success) {
-        showToast("Import successful", "success");
+        showToast(t("options_importSuccess"), "success");
         setImportText("");
       } else {
-        showToast(result?.errors?.join(", ") || "Import failed", "error");
+        showToast(result?.errors?.join(", ") || t("options_importFailed"), "error");
       }
     } catch {
-      showToast("Import failed", "error");
+      showToast(t("options_importFailed"), "error");
     }
   }
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-6">Import / Export</h2>
+      <h2 className="text-xl font-semibold mb-6">{t("options_exportTitle")}</h2>
 
       {/* Export */}
       <div className="mb-8">
-        <h3 className="text-sm font-medium text-zinc-300 mb-3">Export</h3>
+        <h3 className="text-sm font-medium text-zinc-300 mb-3">{t("options_export")}</h3>
         <div className="flex flex-wrap gap-2 mb-3">
           {cats.map((c) => (
             <label
@@ -879,11 +916,11 @@ function ExportPanel() {
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={handleExport}>
-            Generate
+            {t("options_exportGenerate")}
           </Button>
           {preview && (
             <Button size="sm" variant="outline" onClick={download}>
-              Download
+              {t("options_exportDownload")}
             </Button>
           )}
         </div>
@@ -896,15 +933,15 @@ function ExportPanel() {
 
       {/* Import */}
       <div>
-        <h3 className="text-sm font-medium text-zinc-300 mb-3">Import</h3>
+        <h3 className="text-sm font-medium text-zinc-300 mb-3">{t("options_import")}</h3>
         <textarea
           className="w-full h-32 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 font-mono placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-300 resize-none"
-          placeholder="Paste JSON..."
+          placeholder={t("options_importPlaceholder")}
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
         />
         <Button size="sm" className="mt-2" onClick={handleImport} disabled={!importText.trim()}>
-          Import
+          {t("options_importButton")}
         </Button>
       </div>
     </div>
@@ -983,8 +1020,7 @@ function CategoriesPanel({
   }
 
   async function handleDelete(key: string) {
-    if (!confirm(`Delete category "${(categories[key] ?? CATEGORY_INFO["custom"])?.label}"?`))
-      return;
+    if (!confirm(t("options_deleteCategoryConfirm", [t(`category_${key}`)]))) return;
     try {
       await chrome.runtime.sendMessage({ type: "deleteCategory", key });
       onChanged();
@@ -1061,7 +1097,11 @@ function CategoriesPanel({
         <div className="space-y-4">
           <div>
             <label className="text-sm text-zinc-400 mb-1 block">{t("options_categoryName")}</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="社交媒体" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("category_social")}
+            />
           </div>
           <div>
             <label className="text-sm text-zinc-400 mb-1 block">
@@ -1070,7 +1110,7 @@ function CategoriesPanel({
             <Input
               value={nameEn}
               onChange={(e) => setNameEn(e.target.value)}
-              placeholder="Social Media"
+              placeholder={t("category_social")}
               disabled={editingKey !== null}
             />
           </div>
@@ -1142,8 +1182,8 @@ function SettingsPanel() {
           <Select
             options={[
               { value: "auto", label: t("options_languageAuto") },
-              { value: "en", label: "English" },
-              { value: "zh_CN", label: "中文" },
+              { value: "en", label: t("settings_langEn") },
+              { value: "zh_CN", label: t("settings_langZhCN") },
             ]}
             value={locale}
             onChange={async (e) => {

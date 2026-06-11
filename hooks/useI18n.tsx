@@ -112,14 +112,14 @@ export function I18nProvider({ children }: I18nProviderProps) {
 
   const categoryLabel = useCallback(
     (category: string): string => {
-      return t(`category.${category}`) || category;
+      return t(`category_${category}`) || category;
     },
     [t],
   );
 
   const ruleTypeLabel = useCallback(
     (type: string): string => {
-      return t(`ruleType.${type}`) || type;
+      return t(`ruleType_${type}`) || type;
     },
     [t],
   );

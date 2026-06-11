@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
+import { useI18n } from "../../hooks/useI18n";
 import { CATEGORY_INFO } from "../../packages/core/src";
 import type { Category, QuoteItem } from "../../packages/core/src";
 
@@ -19,52 +20,22 @@ interface PageState {
   remainingUnlocks: number;
 }
 
-const DEFAULT_QUOTES: Record<string, QuoteItem[]> = {
-  social: [
-    { id: "1", text: "真正的朋友不在屏幕里", author: "" },
-    { id: "2", text: "你刷走的不是时间，是机会", author: "" },
-    { id: "3", text: "社交媒体的算法比你更了解你的弱点", author: "" },
-    { id: "4", text: "点赞不会让你更快乐，专注会让你更充实", author: "" },
-    { id: "5", text: "别人的人生精选集不等于你的日常", author: "" },
-  ],
-  video: [
-    { id: "1", text: "看完这个视频你什么也不会改变", author: "" },
-    { id: "2", text: "算法的尽头不是充实，是空虚", author: "" },
-    { id: "3", text: "下一个视频不会更好", author: "" },
-    { id: "4", text: "真正的好内容值得搜索，不是被推送", author: "" },
-    { id: "5", text: "Binge-watching 不是休息，是逃避", author: "" },
-  ],
-  game: [
-    { id: "1", text: "通关的人生不在游戏里", author: "" },
-    { id: "2", text: "每局 20 分钟，一年就是 120 小时", author: "" },
-    { id: "3", text: "游戏里的成就不会出现在你的简历上", author: "" },
-    { id: "4", text: "延迟满足是成年人最重要的能力", author: "" },
-    { id: "5", text: "打完这一把，你也不会变得更好", author: "" },
-  ],
-  news: [
-    { id: "1", text: "99% 的新闻和你无关", author: "" },
-    { id: "2", text: "信息焦虑不会让你更博学", author: "" },
-    { id: "3", text: "真正的深度来自书籍，不是碎片信息", author: "" },
-    { id: "4", text: "24 小时新闻是注意力的工业污染", author: "" },
-    { id: "5", text: "少看新闻，多读历史", author: "" },
-  ],
-  adult: [
-    { id: "1", text: "这不是你真正需要的", author: "" },
-    { id: "2", text: "你值得更健康的娱乐方式", author: "" },
-    { id: "3", text: "短暂的刺激不会带来持久的满足", author: "" },
-    { id: "4", text: "真正的亲密不在屏幕里", author: "" },
-    { id: "5", text: "尊重自己，也尊重他人", author: "" },
-  ],
-  custom: [
-    { id: "1", text: "保持专注，你可以做到", author: "" },
-    { id: "2", text: "每一次克制都是进步", author: "" },
-    { id: "3", text: "你的未来由专注的此刻构成", author: "" },
-    { id: "4", text: "拖延的每一分钟都是你在欠自己", author: "" },
-    { id: "5", text: "先完成，再放松", author: "" },
-  ],
-};
+function getQuotes(
+  t: (key: string, substitutions?: (string | number)[]) => string,
+  category: string,
+): QuoteItem[] {
+  const quotes: QuoteItem[] = [];
+  for (let i = 1; i <= 5; i++) {
+    const text = t(`quote_${category}_${i}`);
+    if (text && text !== `quote_${category}_${i}`) {
+      quotes.push({ id: String(i), text, author: "" });
+    }
+  }
+  return quotes.length > 0 ? quotes : [{ id: "1", text: t("blocked_defaultQuote"), author: "" }];
+}
 
 export default function App() {
+  const { t } = useI18n();
   const [state, setState] = useState<PageState | null>(null);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -98,7 +69,7 @@ export default function App() {
     const customMessage = params.get("customMessage") || "";
 
     const info = CATEGORY_INFO[category] ?? CATEGORY_INFO["custom"]!;
-    const quotes = DEFAULT_QUOTES[category] || DEFAULT_QUOTES["custom"]!;
+    const quotes = getQuotes(t, category);
     const quote = quotes[Math.floor(Math.random() * quotes.length)];
 
     try {
@@ -161,10 +132,10 @@ export default function App() {
           window.location.href = state.blockedUrl || "about:blank";
         }, 300);
       } else {
-        setError(resp.error || "Incorrect password");
+        setError(resp.error || t("blocked_incorrectPassword"));
       }
     } catch {
-      setError("Failed to unlock");
+      setError(t("blocked_failedToUnlock"));
     }
   }
 
@@ -195,7 +166,7 @@ export default function App() {
     );
   }
 
-  const info = CATEGORY_INFO[state.category] ?? CATEGORY_INFO["custom"]!;
+  const catLabel = t(`category_${state.category}`);
 
   return (
     <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4 relative overflow-hidden">
@@ -232,8 +203,8 @@ export default function App() {
               />
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-zinc-100 mb-1">Site Blocked</h1>
-          <Badge color={state.themeColor}>{info.label}</Badge>
+          <h1 className="text-xl font-bold text-zinc-100 mb-1">{t("blocked_title")}</h1>
+          <Badge color={state.themeColor}>{catLabel}</Badge>
         </div>
 
         {/* URL */}
@@ -252,7 +223,7 @@ export default function App() {
           }}
         >
           <p className="text-base font-medium leading-relaxed" style={{ color: state.themeColor }}>
-            {state.customMessage || state.quote?.text || "Stay focused."}
+            {state.customMessage || state.quote?.text || t("blocked_defaultQuote")}
           </p>
           {!state.customMessage && state.quote?.author ? (
             <p className="text-sm text-zinc-600 mt-3">— {state.quote.author}</p>
@@ -264,7 +235,7 @@ export default function App() {
           <div className="space-y-3">
             <Input
               type="password"
-              placeholder="Enter password to unlock temporarily"
+              placeholder={t("blocked_passwordPlaceholder")}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -286,10 +257,10 @@ export default function App() {
               onClick={handleUnlock}
               disabled={!password}
             >
-              Unlock
+              {t("blocked_unlock")}
             </Button>
             <p className="text-center text-xs text-zinc-600">
-              {state.remainingUnlocks} unlocks remaining today
+              {t("blocked_unlocksRemaining", [String(state.remainingUnlocks)])}
             </p>
           </div>
         ) : (
@@ -297,14 +268,14 @@ export default function App() {
           <div className="text-center space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-400/10 border border-green-400/20">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-green-400 text-sm font-medium">Unlocked</span>
+              <span className="text-green-400 text-sm font-medium">{t("blocked_unlocked")}</span>
             </div>
             {countdown && <p className="text-3xl font-mono font-bold text-zinc-100">{countdown}</p>}
             {state.warning && (
               <div className="space-y-2">
-                <p className="text-amber-400 text-sm">Unlock expires soon</p>
+                <p className="text-amber-400 text-sm">{t("blocked_expiresSoon")}</p>
                 <Button variant="outline" size="sm" onClick={handleExtend} disabled={extending}>
-                  {extending ? "Extending..." : "Extend 5 minutes"}
+                  {extending ? t("blocked_extending") : t("blocked_extend")}
                 </Button>
               </div>
             )}
@@ -312,7 +283,7 @@ export default function App() {
         )}
 
         {/* Footer */}
-        <p className="text-center text-xs text-zinc-700">BlockSite · Stay focused</p>
+        <p className="text-center text-xs text-zinc-700">{t("blocked_footer")}</p>
       </div>
     </div>
   );
