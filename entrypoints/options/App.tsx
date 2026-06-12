@@ -6,6 +6,8 @@ import { Toggle } from "../../components/ui/Toggle";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { ToastContainer, showToast } from "../../components/ui/Toast";
+import { Checkbox } from "../../components/ui/Checkbox";
+import { Textarea } from "../../components/ui/Textarea";
 import { useI18n } from "../../hooks/useI18n";
 import { CATEGORY_INFO, BLOCK_TYPE_LABELS } from "../../packages/core/src";
 import type { BlockedItem, BlockType, SchedulePeriod, CategoryInfo } from "../../packages/core/src";
@@ -332,11 +334,13 @@ function RulesPanel({
       {/* Rules list */}
       <div className="rounded-xl border border-zinc-800 overflow-hidden">
         <label className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800/30 text-sm text-zinc-400 border-b border-zinc-800 cursor-pointer hover:bg-zinc-800/50 transition-colors">
-          <input
-            type="checkbox"
-            checked={allSel}
-            onChange={() => setSelected(allSel ? new Set() : new Set(filtered.map((r) => r.id)))}
-            className="rounded"
+          <Checkbox
+            checked={
+              allSel ? true : filtered.some((r) => selected.has(r.id)) ? "indeterminate" : false
+            }
+            onCheckedChange={(checked) =>
+              setSelected(checked ? new Set(filtered.map((r) => r.id)) : new Set())
+            }
           />
           {t("options_selectAll")}
         </label>
@@ -358,15 +362,13 @@ function RulesPanel({
               key={rule.id}
               className="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-800/50 last:border-0 hover:bg-zinc-800/30 transition-colors"
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={selected.has(rule.id)}
-                onChange={() => {
+                onCheckedChange={(checked) => {
                   const next = new Set(selected);
-                  next.has(rule.id) ? next.delete(rule.id) : next.add(rule.id);
+                  checked ? next.add(rule.id) : next.delete(rule.id);
                   setSelected(next);
                 }}
-                className="rounded"
               />
               <span
                 className={`flex-1 text-sm font-mono truncate ${rule.enabled ? "text-zinc-200" : "text-zinc-600"}`}
@@ -900,15 +902,13 @@ function ExportPanel() {
               key={c.id}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/50 text-sm cursor-pointer hover:bg-zinc-800 transition-colors"
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={sel.has(c.id)}
-                onChange={() => {
+                onCheckedChange={(checked) => {
                   const n = new Set(sel);
-                  n.has(c.id) ? n.delete(c.id) : n.add(c.id);
+                  checked ? n.add(c.id) : n.delete(c.id);
                   setSel(n);
                 }}
-                className="rounded"
               />
               {c.label}
             </label>
@@ -934,8 +934,8 @@ function ExportPanel() {
       {/* Import */}
       <div>
         <h3 className="text-sm font-medium text-zinc-300 mb-3">{t("options_import")}</h3>
-        <textarea
-          className="w-full h-32 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 font-mono placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-lime-300 resize-none"
+        <Textarea
+          className="w-full h-32 font-mono"
           placeholder={t("options_importPlaceholder")}
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
