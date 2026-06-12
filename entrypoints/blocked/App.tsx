@@ -89,7 +89,7 @@ export default function App() {
         unlockUntil: (checkResp as { until: number | null })?.until || null,
         warning: (checkResp as { warning: boolean })?.warning || false,
         quote,
-        remainingUnlocks: 5,
+        remainingUnlocks: (checkResp as { remainingUnlocks?: number })?.remainingUnlocks ?? 0,
       });
     } catch {
       setState({
@@ -103,7 +103,7 @@ export default function App() {
         unlockUntil: null,
         warning: false,
         quote,
-        remainingUnlocks: 5,
+        remainingUnlocks: 0,
       });
     }
 
@@ -126,7 +126,16 @@ export default function App() {
       });
 
       if (resp.success) {
-        setState((prev) => (prev ? { ...prev, unlocked: true, unlockUntil: resp.until } : null));
+        setState((prev) =>
+          prev
+            ? {
+                ...prev,
+                unlocked: true,
+                unlockUntil: resp.until,
+                remainingUnlocks: Math.max(0, prev.remainingUnlocks - 1),
+              }
+            : null,
+        );
         setError("");
         setTimeout(() => {
           window.location.href = state.blockedUrl || "about:blank";

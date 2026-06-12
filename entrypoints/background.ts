@@ -1,7 +1,7 @@
 import { initStorage, rules as rulesRepo, settings } from "../packages/storage/src";
 import { applyRules, clearAllRules, getAll, createItem } from "../packages/rules/src";
 import { getConfig, saveConfig, isActive } from "../packages/schedule/src";
-import { checkExpiry } from "../packages/unlock/src";
+import { checkExpiry, getRemainingUnlocks } from "../packages/unlock/src";
 import { recordBlock } from "../packages/stats/src";
 import { exportData, importData, validateImportData } from "../packages/import-export/src";
 import {
@@ -314,7 +314,11 @@ async function handleMessage(
 
     checkUnlock: async (msg) => {
       const category = msg["category"] as Category;
-      return checkExpiry(category);
+      const [expiry, remaining] = await Promise.all([
+        checkExpiry(category),
+        getRemainingUnlocks(category),
+      ]);
+      return { ...expiry, remainingUnlocks: remaining };
     },
 
     blockPageOpened: async (msg) => {
