@@ -260,5 +260,75 @@
   "options_deleteCategoryConfirm": {
     "message": "Delete category \"$CATEGORY$\"?",
     "placeholders": { "category": { "content": "$1" } }
+  },
+
+  "options_tabAI": { "message": "AI" },
+  "options_aiTitle": { "message": "AI Settings" },
+  "options_aiDesc": {
+    "message": "Configure AI providers and features. API keys are stored locally and never sent anywhere except to your chosen provider. API usage may incur costs based on your provider's pricing."
+  },
+  "options_aiApiKeyManagement": { "message": "API Key Management" },
+  "options_aiProvider": { "message": "Provider" },
+  "options_aiApiKey": { "message": "API Key" },
+  "options_aiApiKeyPlaceholder": { "message": "sk-..." },
+  "options_aiApiKeyReplace": { "message": "•••••••• (enter new key to replace)" },
+  "options_aiBaseUrl": { "message": "Base URL" },
+  "options_aiModel": { "message": "Model" },
+  "options_aiTestConnection": { "message": "Test Connection" },
+  "options_aiTesting": { "message": "Testing..." },
+  "options_aiConnected": { "message": "Connected!" },
+  "options_aiFailed": { "message": "Failed" },
+  "options_aiSaveKey": { "message": "Save Key" },
+  "options_aiRemoveKey": { "message": "Remove Key" },
+  "options_aiConnectionSuccess": { "message": "Connection successful!" },
+  "options_aiConnectionFailed": { "message": "Connection failed" },
+  "options_aiConfiguredProviders": { "message": "Configured Providers" },
+  "options_aiRemove": { "message": "Remove" },
+  "options_aiFeatures": { "message": "AI Features" },
+  "options_aiFeatureCategorize": { "message": "Auto-categorization" },
+  "options_aiFeatureCategorizeDesc": {
+    "message": "AI suggests a category when you add a new site to block"
+  },
+  "options_aiFeatureQuotes": { "message": "AI-generated quotes" },
+  "options_aiFeatureQuotesDesc": {
+    "message": "Show AI-generated motivational quotes on blocked pages"
+  },
+  "options_aiFeatureNlRules": { "message": "Natural language rules" },
+  "options_aiFeatureNlRulesDesc": { "message": "Create blocking rules by describing them" },
+  "options_aiFeatureInsights": { "message": "Stats insights" },
+  "options_aiFeatureInsightsDesc": {
+    "message": "AI analyzes your blocking patterns and suggests improvements"
+  },
+  "options_aiLoadingSettings": { "message": "Loading AI settings..." },
+  "options_aiKeySaved": { "message": "API key saved" },
+  "options_aiKeyRemoved": { "message": "API key removed" },
+  "options_aiKeySaveFailed": { "message": "Failed to save API key" },
+  "options_aiKeyRemoveFailed": { "message": "Failed to remove API key" },
+
+  "popup_aiSuggesting": { "message": "AI suggesting category..." },
+  "popup_aiMatch": { "message": "AI match" },
+
+  "dashboard_aiInsights": { "message": "AI Insights" },
+  "dashboard_aiAnalyzing": { "message": "Analyzing your patterns..." },
+  "dashboard_aiActionable": { "message": "Actionable" },
+
+  "options_nlInput": {
+    "message": "Describe what to block, e.g. 'block social media during work hours'"
+  },
+  "options_nlParse": { "message": "AI Parse" },
+  "options_nlParsing": { "message": "Parsing..." },
+  "options_nlNoResult": { "message": "AI could not parse any rules from this input." },
+  "options_nlAddRule": { "message": "Add" },
+  "options_smartRules": { "message": "AI Smart Rules" },
+  "options_smartRulesDesc": {
+    "message": "Sites matching these descriptions will be blocked dynamically by AI"
+  },
+  "options_smartRulesEmpty": {
+    "message": "No smart rules. Describe what to block above and click AI Parse."
+  },
+  "options_smartRulesAdd": { "message": "Add Smart Rule" },
+  "options_nlAddAll": {
+    "message": "Add All $COUNT$ Rules",
+    "placeholders": { "count": { "content": "$1" } }
   }
 }

@@ -14,6 +14,7 @@ import type { Category, AppConfig, BlockedItem, CategoryInfo } from "../packages
 import { DEFAULT_APP_CONFIG } from "../packages/core/src";
 
 const pendingBlockedUrls = new Map<number, string>();
+const aiBlockCache = new Map<string, { blocked: boolean; category: string }>();
 let initPromise: Promise<void> | null = null;
 
 async function ensureInitialized(): Promise<void> {
@@ -60,19 +61,20 @@ export default defineBackground(() => {
   });
 
   chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+    if (details.url.startsWith("chrome-extension://")) return;
     if (details.frameType === "outermost_frame" || details.frameId === 0) {
       pendingBlockedUrls.set(details.tabId, details.url);
     }
   });
 
   chrome.webNavigation.onCommitted.addListener((details) => {
-    if (
-      (details.frameType === "outermost_frame" || details.frameId === 0) &&
-      details.url.startsWith(chrome.runtime.getURL(""))
-    ) {
+    if (details.url.startsWith(chrome.runtime.getURL(""))) {
       return;
     }
-    pendingBlockedUrls.delete(details.tabId);
+    if (details.frameType === "outermost_frame" || details.frameId === 0) {
+      pendingBlockedUrls.delete(details.tabId);
+      handleSmartBlock(details.tabId, details.url).catch(() => {});
+    }
   });
 });
 
@@ -187,6 +189,96 @@ async function handleUnlockCheck(category: Category): Promise<void> {
       await applyRules(items);
     }
   }
+}
+
+async function handleSmartBlock(tabId: number, url: string): Promise<void> {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return;
+
+  const rules =
+    ((await settings.get("aiSmartRules")) as
+      | { id: string; description: string; category: string; enabled: boolean }[]
+      | undefined) ?? [];
+  const active = rules.filter((r) => r.enabled);
+  if (active.length === 0) return;
+
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return;
+  }
+
+  // Check cache
+  const cached = aiBlockCache.get(hostname);
+  if (cached !== undefined) {
+    if (cached.blocked) {
+      await redirectToBlocked(tabId, url, cached.category, "");
+    }
+    return;
+  }
+
+  // Not cached — classify with AI
+  try {
+    // Get page title and content for better classification
+    let title = "";
+    let content = "";
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      title = tab.title ?? "";
+      // Extract page text content
+      const results = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => document.body?.innerText?.slice(0, 2000) ?? "",
+      });
+      content = (results[0]?.result as string) ?? "";
+    } catch {
+      /* tab might not be ready */
+    }
+
+    const activeDescriptions = active.map((r) => r.description);
+    const { classifyUrl } = await import("../packages/ai/src");
+    const result = await classifyUrl(url, title, activeDescriptions, content);
+
+    // Cache result for 24h
+    aiBlockCache.set(hostname, {
+      blocked: result.blocked,
+      category: result.category,
+    });
+
+    if (result.blocked) {
+      // Add to DNR for instant future blocking
+      const rulesList = await rulesRepo.getAll();
+      const existing = rulesList.find((r) => r.type === "domain" && r.value === hostname);
+      if (existing === undefined) {
+        const item = createItem("domain", hostname, result.category, "", rulesList.length);
+        await rulesRepo.put(item);
+        const config = await getAppConfig();
+        if (config.enabled) {
+          const allRules = await rulesRepo.getAll();
+          await applyRules(allRules);
+        }
+      }
+
+      await redirectToBlocked(tabId, url, result.category, result.reason);
+    }
+  } catch {
+    /* AI not configured or failed — allow navigation */
+  }
+}
+
+async function redirectToBlocked(
+  tabId: number,
+  blockedUrl: string,
+  category: string,
+  reason: string,
+): Promise<void> {
+  const params = new URLSearchParams({
+    ruleId: `ai-${Date.now()}`,
+    category,
+    customMessage: encodeURIComponent(reason || "AI blocked this site"),
+  });
+  const blockedPage = chrome.runtime.getURL(`blocked.html?${params.toString()}`);
+  await chrome.tabs.update(tabId, { url: blockedPage }).catch(() => {});
 }
 
 type MsgHandler = (
@@ -382,6 +474,175 @@ async function handleMessage(
     validateImport: async (msg) => {
       const json = msg["json"] as string;
       return validateImportData(json);
+    },
+
+    // ── AI Handlers ──
+
+    "ai:categorize": async (msg) => {
+      const siteUrl = msg["siteUrl"] as string;
+      const { categorizeSite } = await import("../packages/ai/src");
+      return categorizeSite(siteUrl);
+    },
+
+    "ai:generateQuote": async (msg) => {
+      const category = msg["category"] as Category;
+      const { generateQuote } = await import("../packages/ai/src");
+      return generateQuote(category);
+    },
+
+    "ai:parseNLRule": async (msg) => {
+      const nlInput = msg["nlInput"] as string;
+      const { parseNaturalLanguageRule } = await import("../packages/ai/src");
+      return parseNaturalLanguageRule(nlInput);
+    },
+
+    "ai:analyzeStats": async (msg) => {
+      const from = msg["from"] as string;
+      const to = msg["to"] as string;
+      const { analyzeStats } = await import("../packages/ai/src");
+      return analyzeStats(from, to);
+    },
+
+    "ai:setApiKey": async (msg) => {
+      const record = msg["record"] as {
+        provider: string;
+        key: string;
+        baseUrl?: string;
+        model?: string;
+      };
+      const { apiKeys } = await import("../packages/storage/src");
+      await apiKeys.put(record);
+      return { success: true };
+    },
+
+    "ai:getApiKeys": async () => {
+      const { apiKeys } = await import("../packages/storage/src");
+      const records = await apiKeys.getAll();
+      return records.map((r) => ({
+        ...r,
+        key: r.key ? `••••${r.key.slice(-4)}` : "",
+      }));
+    },
+
+    "ai:removeApiKey": async (msg) => {
+      const provider = msg["provider"] as string;
+      const { apiKeys } = await import("../packages/storage/src");
+      await apiKeys.remove(provider);
+      return { success: true };
+    },
+
+    "ai:testConnection": async (msg) => {
+      const provider = msg["provider"] as string;
+      const model = msg["model"] as string;
+      const { callAI } = await import("../packages/ai/src");
+      await callAI(
+        provider as Parameters<typeof callAI>[0],
+        model,
+        [{ role: "user", content: "Reply with just the word 'OK'." }],
+        "test-connection",
+      );
+      return { success: true };
+    },
+
+    "ai:getFeatureConfig": async () => {
+      const saved = await settings.get("aiFeatures");
+      return (saved as Record<string, boolean>) ?? {};
+    },
+
+    "ai:setFeatureConfig": async (msg) => {
+      const features = msg["features"] as Record<string, unknown>;
+      const existing = ((await settings.get("aiFeatures")) as Record<string, unknown>) ?? {};
+      await settings.set("aiFeatures", { ...existing, ...features });
+      return { success: true };
+    },
+
+    "ai:getSmartRules": async () => {
+      const rules = (await settings.get("aiSmartRules")) as
+        | { id: string; description: string; category: string; enabled: boolean }[]
+        | undefined;
+      return rules ?? [];
+    },
+
+    "ai:addSmartRule": async (msg) => {
+      const rule = msg["rule"] as {
+        description: string;
+        category: string;
+      };
+      const rules =
+        ((await settings.get("aiSmartRules")) as
+          | { id: string; description: string; category: string; enabled: boolean }[]
+          | undefined) ?? [];
+      rules.push({
+        id: crypto.randomUUID(),
+        description: rule.description,
+        category: rule.category,
+        enabled: true,
+      });
+      await settings.set("aiSmartRules", rules);
+      return { success: true, rules };
+    },
+
+    "ai:removeSmartRule": async (msg) => {
+      const id = msg["id"] as string;
+      const rules =
+        ((await settings.get("aiSmartRules")) as
+          | { id: string; description: string; category: string; enabled: boolean }[]
+          | undefined) ?? [];
+      await settings.set(
+        "aiSmartRules",
+        rules.filter((r) => r.id !== id),
+      );
+      return { success: true };
+    },
+
+    "ai:toggleSmartRule": async (msg) => {
+      const id = msg["id"] as string;
+      const enabled = msg["enabled"] as boolean;
+      const rules =
+        ((await settings.get("aiSmartRules")) as
+          | { id: string; description: string; category: string; enabled: boolean }[]
+          | undefined) ?? [];
+      const idx = rules.findIndex((r) => r.id === id);
+      if (idx >= 0) {
+        rules[idx] = { ...rules[idx]!, enabled };
+        await settings.set("aiSmartRules", rules);
+      }
+      return { success: true };
+    },
+
+    "ai:getCallLogs": async () => {
+      const logs =
+        ((await settings.get("aiCallLogs")) as
+          | {
+              id: string;
+              timestamp: number;
+              provider: string;
+              feature: string;
+              input: string;
+              output: string;
+              success: boolean;
+            }[]
+          | undefined) ?? [];
+      return logs.reverse();
+    },
+
+    "ai:clearCallLogs": async () => {
+      await settings.set("aiCallLogs", []);
+      return { success: true };
+    },
+
+    "ai:classifyUrl": async (msg) => {
+      const url = msg["url"] as string;
+      const title = msg["title"] as string;
+      const rules =
+        ((await settings.get("aiSmartRules")) as
+          | { id: string; description: string; category: string; enabled: boolean }[]
+          | undefined) ?? [];
+      const activeDescriptions = rules.filter((r) => r.enabled).map((r) => r.description);
+      if (activeDescriptions.length === 0) return { blocked: false };
+
+      const { classifyUrl } = await import("../packages/ai/src");
+      return classifyUrl(url, title, activeDescriptions);
     },
   };
 

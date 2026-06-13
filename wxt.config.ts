@@ -1,9 +1,31 @@
 import { defineConfig } from "wxt";
 import { writeFileSync, cpSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const rootDir = dirname(fileURLToPath(import.meta.url));
+
+const packageAliases: Record<string, string> = {
+  "@blocksite/core": resolve(rootDir, "packages/core/src/index.ts"),
+  "@blocksite/storage": resolve(rootDir, "packages/storage/src/index.ts"),
+  "@blocksite/event-bus": resolve(rootDir, "packages/event-bus/src/index.ts"),
+  "@blocksite/rules": resolve(rootDir, "packages/rules/src/index.ts"),
+  "@blocksite/schedule": resolve(rootDir, "packages/schedule/src/index.ts"),
+  "@blocksite/auth": resolve(rootDir, "packages/auth/src/index.ts"),
+  "@blocksite/unlock": resolve(rootDir, "packages/unlock/src/index.ts"),
+  "@blocksite/stats": resolve(rootDir, "packages/stats/src/index.ts"),
+  "@blocksite/presets": resolve(rootDir, "packages/presets/src/index.ts"),
+  "@blocksite/import-export": resolve(rootDir, "packages/import-export/src/index.ts"),
+  "@blocksite/ai": resolve(rootDir, "packages/ai/src/index.ts"),
+};
 
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
+  vite: () => ({
+    resolve: {
+      alias: packageAliases,
+    },
+  }),
   manifest: {
     name: "__MSG_appName__",
     description: "__MSG_appDescription__",
@@ -15,6 +37,7 @@ export default defineConfig({
       "alarms",
       "tabs",
       "webNavigation",
+      "scripting",
     ],
     host_permissions: ["<all_urls>"],
     action: {

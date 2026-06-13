@@ -14,6 +14,7 @@ export default defineConfig({
       "@blocksite/stats": resolve(__dirname, "packages/stats/src/index.ts"),
       "@blocksite/presets": resolve(__dirname, "packages/presets/src/index.ts"),
       "@blocksite/import-export": resolve(__dirname, "packages/import-export/src/index.ts"),
+      "@blocksite/ai": resolve(__dirname, "packages/ai/src/index.ts"),
     },
   },
   test: {

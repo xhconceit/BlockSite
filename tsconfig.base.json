@@ -27,6 +27,7 @@
       "@blocksite/presets": ["./packages/presets/src/index.ts"],
       "@blocksite/import-export": ["./packages/import-export/src/index.ts"],
       "@blocksite/categories": ["./packages/categories/src/index.ts"],
+      "@blocksite/ai": ["./packages/ai/src/index.ts"],
     },
   },
   "exclude": ["node_modules", "dist", ".output"],

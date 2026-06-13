@@ -9,6 +9,7 @@ import type {
 } from "@blocksite/core";
 import { DEFAULT_APP_CONFIG } from "@blocksite/core";
 import { openDB } from "./db";
+import type { BlockSiteDB, ApiKeyRecord } from "./db";
 import {
   rulesStore,
   presetsStore,
@@ -18,8 +19,8 @@ import {
   statsStore,
   dailyStatsStore,
   settingsStore,
+  apiKeysStore,
 } from "./stores";
-import type { BlockSiteDB } from "./db";
 
 let db: BlockSiteDB | null = null;
 let fallbackMode = false;
@@ -342,5 +343,47 @@ export const settings = {
       return;
     }
     return settingsStore.remove(getDB(), key);
+  },
+};
+
+// ── API Keys ──
+export const apiKeys = {
+  async get(provider: string): Promise<ApiKeyRecord | undefined> {
+    if (fallbackMode) {
+      const fb = await loadFallback();
+      const a = (fb["apiKeys"] as Record<string, ApiKeyRecord>) ?? {};
+      return a[provider];
+    }
+    return apiKeysStore.get(getDB(), provider);
+  },
+  async getAll(): Promise<ApiKeyRecord[]> {
+    if (fallbackMode) {
+      const fb = await loadFallback();
+      const a = (fb["apiKeys"] as Record<string, ApiKeyRecord>) ?? {};
+      return Object.entries(a).map(([provider, record]) => ({ ...record, provider }));
+    }
+    return apiKeysStore.getAll(getDB());
+  },
+  async put(record: ApiKeyRecord): Promise<void> {
+    if (fallbackMode) {
+      const fb = await loadFallback();
+      const a = (fb["apiKeys"] as Record<string, ApiKeyRecord>) ?? {};
+      a[record.provider] = record;
+      fb["apiKeys"] = a;
+      await saveFallback(fb);
+      return;
+    }
+    return apiKeysStore.put(getDB(), record);
+  },
+  async remove(provider: string): Promise<void> {
+    if (fallbackMode) {
+      const fb = await loadFallback();
+      const a = (fb["apiKeys"] as Record<string, unknown>) ?? {};
+      delete a[provider];
+      fb["apiKeys"] = a;
+      await saveFallback(fb);
+      return;
+    }
+    return apiKeysStore.remove(getDB(), provider);
   },
 };

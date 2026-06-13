@@ -216,7 +216,7 @@ function buildRule(item: BlockedItem, ruleId: number): chrome.declarativeNetRequ
       return {
         ...base,
         condition: {
-          requestDomains: [item.value],
+          requestDomains: [item.value, `www.${item.value}`],
           resourceTypes: [chrome.declarativeNetRequest.ResourceType.MAIN_FRAME],
         },
       } as chrome.declarativeNetRequest.Rule;

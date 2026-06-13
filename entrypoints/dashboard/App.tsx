@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useI18n } from "../../hooks/useI18n";
 import { CATEGORY_INFO } from "../../packages/core/src";
 import type { Category } from "../../packages/core/src";
+import type { StatsAnalysis, StatsInsight } from "../../packages/ai/src";
 
 interface DashData {
   today: number;
@@ -20,10 +21,39 @@ export default function App() {
   const { t } = useI18n();
   const [data, setData] = useState<DashData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState<StatsAnalysis | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (data !== null) {
+      loadInsights();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  async function loadInsights() {
+    setInsightsLoading(true);
+    try {
+      const today = fmt(new Date());
+      const weekAgo = fmt(new Date(Date.now() - 7 * 86400000));
+      const result = (await chrome.runtime.sendMessage({
+        type: "ai:analyzeStats",
+        from: weekAgo,
+        to: today,
+      })) as StatsAnalysis;
+      if (result?.insights) {
+        setInsights(result);
+      }
+    } catch {
+      /* AI not configured — silently skip */
+    } finally {
+      setInsightsLoading(false);
+    }
+  }
 
   async function loadData() {
     try {
@@ -201,6 +231,29 @@ export default function App() {
             )}
           </Panel>
         </div>
+
+        {/* AI Insights */}
+        {(insights !== null || insightsLoading) && (
+          <div className="mt-5">
+            <Panel title={t("dashboard_aiInsights")}>
+              {insightsLoading ? (
+                <div className="flex items-center gap-3 py-4">
+                  <div className="w-4 h-4 border-2 border-lime-300 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-zinc-500 text-sm">{t("dashboard_aiAnalyzing")}</span>
+                </div>
+              ) : insights ? (
+                <div className="space-y-3">
+                  {insights.summary && (
+                    <p className="text-sm text-zinc-400 mb-3">{insights.summary}</p>
+                  )}
+                  {insights.insights.map((insight, i) => (
+                    <InsightCard key={i} insight={insight} />
+                  ))}
+                </div>
+              ) : null}
+            </Panel>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -230,6 +283,33 @@ function Empty({ t }: { t: (key: string) => string }) {
   return (
     <div className="flex items-center justify-center h-32 text-zinc-600 text-sm">
       {t("dashboard_noData")}
+    </div>
+  );
+}
+
+function InsightCard({ insight }: { insight: StatsInsight }) {
+  const severityColors: Record<string, string> = {
+    info: "bg-blue-400/10 border-blue-400/20 text-blue-400",
+    warning: "bg-amber-400/10 border-amber-400/20 text-amber-400",
+    suggestion: "bg-lime-300/10 border-lime-300/20 text-lime-300",
+  };
+
+  return (
+    <div
+      className={`rounded-lg border px-4 py-3 ${severityColors[insight.severity] ?? severityColors["info"]}`}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-xs font-medium uppercase tracking-wider opacity-70">
+          {insight.severity}
+        </span>
+        {insight.actionable && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-800/50">
+            {t("dashboard_aiActionable")}
+          </span>
+        )}
+      </div>
+      <p className="text-sm font-medium">{insight.title}</p>
+      <p className="text-xs mt-1 opacity-80">{insight.description}</p>
     </div>
   );
 }

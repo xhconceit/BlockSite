@@ -252,5 +252,63 @@
   "options_deleteCategoryConfirm": {
     "message": "删除分类「$CATEGORY$」？",
     "placeholders": { "category": { "content": "$1" } }
+  },
+
+  "options_tabAI": { "message": "AI 助手" },
+  "options_aiTitle": { "message": "AI 设置" },
+  "options_aiDesc": {
+    "message": "配置 AI 提供商和功能。API Key 仅存储在本地，只会发送到你选择的 AI 提供商服务器。使用 API 可能会产生费用，请参考各提供商的定价。"
+  },
+  "options_aiApiKeyManagement": { "message": "API Key 管理" },
+  "options_aiProvider": { "message": "提供商" },
+  "options_aiApiKey": { "message": "API Key" },
+  "options_aiApiKeyPlaceholder": { "message": "sk-..." },
+  "options_aiApiKeyReplace": { "message": "•••••••• (输入新 key 替换)" },
+  "options_aiBaseUrl": { "message": "Base URL" },
+  "options_aiModel": { "message": "模型" },
+  "options_aiTestConnection": { "message": "测试连接" },
+  "options_aiTesting": { "message": "测试中..." },
+  "options_aiConnected": { "message": "已连接!" },
+  "options_aiFailed": { "message": "失败" },
+  "options_aiSaveKey": { "message": "保存 Key" },
+  "options_aiRemoveKey": { "message": "删除 Key" },
+  "options_aiConnectionSuccess": { "message": "连接成功!" },
+  "options_aiConnectionFailed": { "message": "连接失败" },
+  "options_aiConfiguredProviders": { "message": "已配置的提供商" },
+  "options_aiRemove": { "message": "移除" },
+  "options_aiFeatures": { "message": "AI 功能" },
+  "options_aiFeatureCategorize": { "message": "自动分类" },
+  "options_aiFeatureCategorizeDesc": { "message": "添加新网站时 AI 自动推荐分类" },
+  "options_aiFeatureQuotes": { "message": "AI 生成名言" },
+  "options_aiFeatureQuotesDesc": { "message": "在拦截页面显示 AI 生成的激励名言" },
+  "options_aiFeatureNlRules": { "message": "自然语言创建规则" },
+  "options_aiFeatureNlRulesDesc": { "message": "用自然语言描述即可创建拦截规则" },
+  "options_aiFeatureInsights": { "message": "统计洞察" },
+  "options_aiFeatureInsightsDesc": { "message": "AI 分析拦截模式并提供改进建议" },
+  "options_aiLoadingSettings": { "message": "加载 AI 设置中..." },
+  "options_aiKeySaved": { "message": "API Key 已保存" },
+  "options_aiKeyRemoved": { "message": "API Key 已删除" },
+  "options_aiKeySaveFailed": { "message": "保存 API Key 失败" },
+  "options_aiKeyRemoveFailed": { "message": "删除 API Key 失败" },
+
+  "popup_aiSuggesting": { "message": "AI 正在建议分类..." },
+  "popup_aiMatch": { "message": "AI 匹配" },
+
+  "dashboard_aiInsights": { "message": "AI 洞察" },
+  "dashboard_aiAnalyzing": { "message": "正在分析你的模式..." },
+  "dashboard_aiActionable": { "message": "可执行" },
+
+  "options_nlInput": { "message": "描述你想拦截的内容，例如「拦截工作时间所有社交媒体」" },
+  "options_nlParse": { "message": "AI 解析" },
+  "options_nlParsing": { "message": "解析中..." },
+  "options_nlNoResult": { "message": "AI 无法从输入中解析出规则。" },
+  "options_nlAddRule": { "message": "添加" },
+  "options_smartRules": { "message": "AI 智能规则" },
+  "options_smartRulesDesc": { "message": "匹配这些描述的网站会被 AI 动态拦截" },
+  "options_smartRulesEmpty": { "message": "暂无智能规则。在上方描述要拦截的内容，点击 AI 解析。" },
+  "options_smartRulesAdd": { "message": "添加智能规则" },
+  "options_nlAddAll": {
+    "message": "一键添加全部 $COUNT$ 条规则",
+    "placeholders": { "count": { "content": "$1" } }
   }
 }

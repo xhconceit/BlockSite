@@ -6,6 +6,7 @@ import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { CATEGORY_INFO } from "../../packages/core/src";
 import type { BlockedItem, AppConfig, CategoryInfo } from "../../packages/core/src";
+import type { CategorizationResult } from "../../packages/ai/src";
 import { useI18n } from "../../hooks/useI18n";
 import { ToastContainer, showToast } from "../../components/ui/Toast";
 
@@ -27,11 +28,39 @@ export default function App() {
   const [quickAddMessage, setQuickAddMessage] = useState("");
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
+  const [aiCategory, setAiCategory] = useState<CategorizationResult | null>(null);
+  const [aiCategoryLoading, setAiCategoryLoading] = useState(false);
 
   useEffect(() => {
     loadState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (state?.currentUrl && !alreadyBlocked) {
+      fetchAiCategory(state.currentUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.currentUrl]);
+
+  async function fetchAiCategory(url: string) {
+    setAiCategoryLoading(true);
+    setAiCategory(null);
+    try {
+      const result = (await chrome.runtime.sendMessage({
+        type: "ai:categorize",
+        siteUrl: url,
+      })) as CategorizationResult;
+      if (result?.category !== undefined) {
+        setAiCategory(result);
+        setQuickAddCategory(result.category);
+      }
+    } catch {
+      /* AI not configured or failed — silently use manual selection */
+    } finally {
+      setAiCategoryLoading(false);
+    }
+  }
 
   async function loadState() {
     try {
@@ -224,19 +253,32 @@ export default function App() {
           </div>
         ) : (
           <div className="space-y-2">
-            <Select
-              options={
-                categoryOptions.length > 0
-                  ? categoryOptions
-                  : Object.entries(CATEGORY_INFO).map(([k]) => ({
-                      value: k,
-                      label: t(`category_${k}`),
-                    }))
-              }
-              value={quickAddCategory}
-              onChange={(e) => setQuickAddCategory(e.target.value)}
-              className="flex-1"
-            />
+            {aiCategoryLoading && (
+              <div className="flex items-center gap-2 text-xs text-zinc-500">
+                <div className="w-3 h-3 border border-lime-300 border-t-transparent rounded-full animate-spin" />
+                {t("popup_aiSuggesting")}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Select
+                options={
+                  categoryOptions.length > 0
+                    ? categoryOptions
+                    : Object.entries(CATEGORY_INFO).map(([k]) => ({
+                        value: k,
+                        label: t(`category_${k}`),
+                      }))
+                }
+                value={quickAddCategory}
+                onChange={(e) => setQuickAddCategory(e.target.value)}
+                className="flex-1"
+              />
+              {aiCategory !== null && (
+                <Badge color={CATEGORY_INFO[aiCategory.category].themeColor}>
+                  {t("popup_aiMatch")}: {Math.round(aiCategory.confidence * 100)}%
+                </Badge>
+              )}
+            </div>
             <Input
               placeholder={t("popup_customMessage")}
               value={quickAddMessage}

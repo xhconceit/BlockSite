@@ -11,6 +11,8 @@ import { Textarea } from "../../components/ui/Textarea";
 import { useI18n } from "../../hooks/useI18n";
 import { CATEGORY_INFO, BLOCK_TYPE_LABELS } from "../../packages/core/src";
 import type { BlockedItem, BlockType, SchedulePeriod, CategoryInfo } from "../../packages/core/src";
+import { PROVIDER_INFO_LIST } from "../../packages/ai/src";
+import type { AIProvider, NLParsedRules } from "../../packages/ai/src";
 
 const TAB_KEYS = [
   "rules",
@@ -20,7 +22,17 @@ const TAB_KEYS = [
   "categories",
   "export",
   "settings",
+  "ai",
 ] as const;
+
+const FEATURE_LABELS: Record<string, string> = {
+  categorize: "自动分类",
+  "generate-quote": "AI 名言",
+  "parse-nl-rule": "NL 解析",
+  "analyze-stats": "统计洞察",
+  "classify-url": "智能拦截",
+  "test-connection": "连接测试",
+};
 
 export default function App() {
   const [tab, setTab] = useState("rules");
@@ -59,6 +71,7 @@ export default function App() {
     presets: t("options_tabPresets"),
     password: t("options_tabPasswords"),
     categories: t("options_tabCategories"),
+    ai: t("options_tabAI"),
     export: t("options_tabExport"),
     settings: t("options_tabSettings"),
   };
@@ -107,6 +120,7 @@ export default function App() {
               onChanged={refreshCategories}
             />
           )}
+          {tab === "ai" && <AIPanel />}
           {tab === "export" && <ExportPanel />}
           {tab === "settings" && <SettingsPanel />}
         </div>
@@ -139,10 +153,30 @@ function RulesPanel({
   const [addValue, setAddValue] = useState("");
   const [addCat, setAddCat] = useState<string>("custom");
   const [addMsg, setAddMsg] = useState("");
+  const [nlInput, setNlInput] = useState("");
+  const [nlParsing, setNlParsing] = useState(false);
+  const [nlResult, setNlResult] = useState<NLParsedRules | null>(null);
+  const [smartRules, setSmartRules] = useState<
+    { id: string; description: string; category: string; enabled: boolean }[]
+  >([]);
+  const [smartRulesLoaded, setSmartRulesLoaded] = useState(false);
 
   useEffect(() => {
     loadRules();
+    loadSmartRules();
   }, []);
+
+  async function loadSmartRules() {
+    try {
+      const rules = (await chrome.runtime.sendMessage({
+        type: "ai:getSmartRules",
+      })) as { id: string; description: string; category: string; enabled: boolean }[];
+      setSmartRules(rules ?? []);
+    } catch {
+      /* ignore */
+    }
+    setSmartRulesLoaded(true);
+  }
 
   async function loadRules() {
     try {
@@ -152,6 +186,112 @@ function RulesPanel({
       /* ignore */
     }
     setLoaded(true);
+  }
+
+  async function handleNlParse() {
+    if (!nlInput.trim()) return;
+    setNlParsing(true);
+    try {
+      // First, also parse into static rules for batch add
+      const parsed = (await chrome.runtime.sendMessage({
+        type: "ai:parseNLRule",
+        nlInput: nlInput.trim(),
+      })) as NLParsedRules;
+      setNlResult(parsed);
+    } catch {
+      /* parsing failed, but we still add the smart rule below */
+    }
+
+    // Create smart rule for dynamic blocking
+    try {
+      const result = (await chrome.runtime.sendMessage({
+        type: "ai:addSmartRule",
+        rule: {
+          description: nlInput.trim(),
+          category: "custom",
+        },
+      })) as { success: boolean; rules: typeof smartRules };
+      if (result?.success) {
+        setSmartRules(result.rules);
+        showToast(t("options_ruleAdded"), "success");
+        setNlInput("");
+      }
+    } catch {
+      showToast(t("options_aiConnectionFailed"), "error");
+    } finally {
+      setNlParsing(false);
+    }
+  }
+
+  async function addAllNlRules(parsedRules: NLParsedRules["rules"]) {
+    const newRules: BlockedItem[] = [...rules];
+    let added = 0;
+    for (const rule of parsedRules) {
+      const exists = newRules.some((r) => r.type === rule.type && r.value === rule.value);
+      if (exists) continue;
+      newRules.push({
+        id: crypto.randomUUID(),
+        type: rule.type as BlockType,
+        value: rule.value,
+        enabled: rule.enabled,
+        category: rule.category,
+        customMessage: "",
+        order: newRules.length,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      added++;
+    }
+    if (added > 0) {
+      await saveRules(newRules);
+      showToast(t("options_ruleAdded"), "success");
+    }
+    setNlInput("");
+    setNlResult(null);
+  }
+
+  async function toggleSmartRule(id: string) {
+    const rule = smartRules.find((r) => r.id === id);
+    if (rule === undefined) return;
+    const updated = smartRules.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r));
+    setSmartRules(updated);
+    await chrome.runtime.sendMessage({
+      type: "ai:toggleSmartRule",
+      id,
+      enabled: !rule.enabled,
+    });
+  }
+
+  async function removeSmartRule(id: string) {
+    const updated = smartRules.filter((r) => r.id !== id);
+    setSmartRules(updated);
+    await chrome.runtime.sendMessage({ type: "ai:removeSmartRule", id });
+  }
+
+  async function addNlRule(rule: {
+    type: string;
+    value: string;
+    category: string;
+    enabled: boolean;
+  }) {
+    const existing = rules.some((r) => r.type === rule.type && r.value === rule.value);
+    if (existing) {
+      showToast(t("options_duplicateRule"), "error");
+      return;
+    }
+    const item: BlockedItem = {
+      id: crypto.randomUUID(),
+      type: rule.type as BlockType,
+      value: rule.value,
+      enabled: rule.enabled,
+      category: rule.category,
+      customMessage: "",
+      order: rules.length,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await saveRules([...rules, item]);
+    showToast(t("options_ruleAdded"), "success");
   }
 
   async function saveRules(items: BlockedItem[]) {
@@ -287,6 +427,97 @@ function RulesPanel({
           <Button onClick={startAdd}>{t("options_addRule")}</Button>
         </div>
       </div>
+
+      {/* NL Rules Input */}
+      <div className="mb-4 p-3 rounded-xl border border-zinc-800 bg-zinc-800/20">
+        <div className="flex gap-2">
+          <Input
+            placeholder={t("options_nlInput")}
+            value={nlInput}
+            onChange={(e) => setNlInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleNlParse()}
+            className="flex-1"
+          />
+          <Button size="sm" onClick={handleNlParse} disabled={!nlInput.trim() || nlParsing}>
+            {nlParsing ? t("options_nlParsing") : t("options_nlParse")}
+          </Button>
+        </div>
+        {nlResult !== null && (
+          <div className="mt-3 space-y-1">
+            {nlResult.explanation ? (
+              <p className="text-xs text-zinc-500 mb-2">{nlResult.explanation}</p>
+            ) : null}
+            {!nlResult.rules || nlResult.rules.length === 0 ? (
+              <p className="text-xs text-zinc-500">{t("options_nlNoResult")}</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-zinc-500">
+                    {nlResult.rules.length} rules parsed
+                  </span>
+                  <Button size="sm" onClick={() => addAllNlRules(nlResult.rules!)}>
+                    {t("options_nlAddAll", [String(nlResult.rules.length)])}
+                  </Button>
+                </div>
+                {nlResult.rules.map((r, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors"
+                  >
+                    <span className="text-sm font-mono text-zinc-300 flex-1">
+                      {r.type}:{r.value}
+                    </span>
+                    <Badge
+                      color={
+                        CATEGORY_INFO[r.category as keyof typeof CATEGORY_INFO]?.themeColor ??
+                        CATEGORY_INFO["custom"]!.themeColor
+                      }
+                    >
+                      {CATEGORY_INFO[r.category as keyof typeof CATEGORY_INFO]?.label ?? r.category}
+                    </Badge>
+                    <Button size="sm" variant="ghost" onClick={() => addNlRule(r)}>
+                      {t("options_nlAddRule")}
+                    </Button>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Smart Rules List */}
+      {smartRules.length > 0 && (
+        <div className="mb-4 rounded-xl border border-lime-300/20 bg-lime-300/5 overflow-hidden">
+          <div className="px-4 py-2 bg-lime-300/10 border-b border-lime-300/20">
+            <span className="text-sm font-medium text-lime-300">{t("options_smartRules")}</span>
+            <span className="text-xs text-zinc-500 ml-2">{t("options_smartRulesDesc")}</span>
+          </div>
+          {smartRules.map((r) => (
+            <div
+              key={r.id}
+              className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800/50 last:border-0 hover:bg-zinc-800/30"
+            >
+              <Toggle checked={r.enabled} onCheckedChange={() => toggleSmartRule(r.id)} />
+              <span className="flex-1 text-sm text-zinc-300 truncate">{r.description}</span>
+              <Badge
+                color={
+                  CATEGORY_INFO[r.category as keyof typeof CATEGORY_INFO]?.themeColor ??
+                  CATEGORY_INFO["custom"]!.themeColor
+                }
+              >
+                {CATEGORY_INFO[r.category as keyof typeof CATEGORY_INFO]?.label ?? r.category}
+              </Badge>
+              <button
+                onClick={() => removeSmartRule(r.id)}
+                className="text-xs text-zinc-600 hover:text-red-400 transition-colors"
+              >
+                {t("common_remove")}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-2 mb-4">
@@ -1221,6 +1452,416 @@ function SettingsPanel() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═══ AI PANEL ═══
+
+function AIPanel() {
+  const { t } = useI18n();
+  const [provider, setProvider] = useState<AIProvider>("anthropic");
+  const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [model, setModel] = useState("");
+  const [testStatus, setTestStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [testError, setTestError] = useState("");
+  const [savedKeys, setSavedKeys] = useState<
+    { provider: string; key: string; baseUrl?: string; model?: string }[]
+  >([]);
+  const [features, setFeatures] = useState({
+    categorize: true,
+    quotes: true,
+    nlRules: true,
+    insights: true,
+  });
+  const [loaded, setLoaded] = useState(false);
+  const [logs, setLogs] = useState<
+    {
+      id: string;
+      timestamp: number;
+      provider: string;
+      feature: string;
+      input: string;
+      output: string;
+      success: boolean;
+    }[]
+  >([]);
+  const [showLogs, setShowLogs] = useState(false);
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  async function loadConfig() {
+    try {
+      const keys = (await chrome.runtime.sendMessage({
+        type: "ai:getApiKeys",
+      })) as { provider: string; key: string; baseUrl?: string; model?: string }[];
+      setSavedKeys(keys ?? []);
+    } catch {
+      /* ignore */
+    }
+    try {
+      const savedFeatures = (await chrome.runtime.sendMessage({
+        type: "ai:getFeatureConfig",
+      })) as Record<string, boolean>;
+      if (savedFeatures && typeof savedFeatures === "object") {
+        setFeatures((prev) => ({ ...prev, ...savedFeatures }));
+      }
+    } catch {
+      /* ignore */
+    }
+    setLoaded(true);
+  }
+
+  const selectedProvider = PROVIDER_INFO_LIST.find((p) => p.key === provider);
+  const hasSavedKey = savedKeys.some((k) => k.provider === provider);
+  const providerModel = model || selectedProvider?.defaultModel || "";
+
+  async function handleTest() {
+    setTestStatus("loading");
+    setTestError("");
+    try {
+      await chrome.runtime.sendMessage({
+        type: "ai:testConnection",
+        provider,
+        model: providerModel,
+      });
+      setTestStatus("success");
+      setTimeout(() => setTestStatus("idle"), 3000);
+    } catch (err) {
+      setTestStatus("error");
+      setTestError(err instanceof Error ? err.message : t("options_aiConnectionFailed"));
+      setTimeout(() => setTestStatus("idle"), 5000);
+    }
+  }
+
+  async function handleSaveKey() {
+    if (!apiKey.trim()) return;
+    try {
+      await chrome.runtime.sendMessage({
+        type: "ai:setApiKey",
+        record: {
+          provider,
+          key: apiKey.trim(),
+          baseUrl: selectedProvider?.requiresBaseUrl ? baseUrl.trim() || undefined : undefined,
+          model: providerModel || undefined,
+        },
+      });
+      // Also save as default provider/model
+      await chrome.runtime.sendMessage({
+        type: "ai:setFeatureConfig",
+        features: { provider, model: providerModel || selectedProvider?.defaultModel || "" },
+      });
+      setApiKey("");
+      setBaseUrl("");
+      showToast(t("options_aiKeySaved"), "success");
+      await loadConfig();
+    } catch {
+      showToast(t("options_aiKeySaveFailed"), "error");
+    }
+  }
+
+  async function handleRemoveKey(p: string) {
+    try {
+      await chrome.runtime.sendMessage({ type: "ai:removeApiKey", provider: p });
+      showToast(t("options_aiKeyRemoved"), "info");
+      await loadConfig();
+    } catch {
+      showToast(t("options_aiKeyRemoveFailed"), "error");
+    }
+  }
+
+  async function loadLogs() {
+    try {
+      const result = (await chrome.runtime.sendMessage({
+        type: "ai:getCallLogs",
+      })) as {
+        id: string;
+        timestamp: number;
+        provider: string;
+        feature: string;
+        input: string;
+        output: string;
+        success: boolean;
+      }[];
+      setLogs(result ?? []);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function clearLogs() {
+    try {
+      await chrome.runtime.sendMessage({ type: "ai:clearCallLogs" });
+      setLogs([]);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function handleFeatureToggle(key: string, value: boolean) {
+    const updated = { ...features, [key]: value };
+    setFeatures(updated);
+    try {
+      await chrome.runtime.sendMessage({
+        type: "ai:setFeatureConfig",
+        features: updated,
+      });
+    } catch {
+      /* ignore persistence errors */
+    }
+  }
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center gap-3 py-8">
+        <div className="w-5 h-5 border-2 border-lime-300 border-t-transparent rounded-full animate-spin" />
+        <span className="text-zinc-500">{t("options_aiLoadingSettings")}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold mb-2">{t("options_aiTitle")}</h2>
+      <p className="text-sm text-zinc-500 mb-6">{t("options_aiDesc")}</p>
+
+      {/* Section A: API Key Management */}
+      <section className="mb-8">
+        <h3 className="text-sm font-medium text-zinc-300 mb-4">
+          {t("options_aiApiKeyManagement")}
+        </h3>
+
+        <div className="rounded-xl border border-zinc-800 p-4 space-y-4 mb-4">
+          <div>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_aiProvider")}</label>
+            <Select
+              options={PROVIDER_INFO_LIST.map((p) => ({
+                value: p.key,
+                label: p.name,
+              }))}
+              value={provider}
+              onChange={(e) => {
+                setProvider(e.target.value as AIProvider);
+                setTestStatus("idle");
+                setTestError("");
+              }}
+            />
+            {selectedProvider && (
+              <p className="text-xs text-zinc-600 mt-1">{selectedProvider.description}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_aiApiKey")}</label>
+            <Input
+              type="password"
+              placeholder={
+                hasSavedKey ? t("options_aiApiKeyReplace") : t("options_aiApiKeyPlaceholder")
+              }
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+            />
+          </div>
+
+          {selectedProvider?.requiresBaseUrl && (
+            <div>
+              <label className="text-sm text-zinc-400 mb-1 block">{t("options_aiBaseUrl")}</label>
+              <Input
+                placeholder="http://localhost:11434"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="text-sm text-zinc-400 mb-1 block">{t("options_aiModel")}</label>
+            <Select
+              options={(selectedProvider?.models ?? []).map((m) => ({
+                value: m,
+                label: m,
+              }))}
+              value={providerModel}
+              onChange={(e) => setModel(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTest}
+              disabled={testStatus === "loading"}
+            >
+              {testStatus === "loading"
+                ? t("options_aiTesting")
+                : testStatus === "success"
+                  ? t("options_aiConnected")
+                  : testStatus === "error"
+                    ? t("options_aiFailed")
+                    : t("options_aiTestConnection")}
+            </Button>
+            <Button size="sm" onClick={handleSaveKey} disabled={!apiKey.trim()}>
+              {t("options_aiSaveKey")}
+            </Button>
+            {hasSavedKey && (
+              <Button variant="destructive" size="sm" onClick={() => handleRemoveKey(provider)}>
+                {t("options_aiRemoveKey")}
+              </Button>
+            )}
+          </div>
+
+          {testStatus === "success" && (
+            <p className="text-sm text-lime-300">{t("options_aiConnectionSuccess")}</p>
+          )}
+          {testStatus === "error" && (
+            <p className="text-sm text-red-400">{testError || t("options_aiConnectionFailed")}</p>
+          )}
+        </div>
+
+        {/* Saved keys list */}
+        {savedKeys.length > 0 && (
+          <div className="rounded-xl border border-zinc-800 overflow-hidden">
+            <div className="px-4 py-2.5 bg-zinc-800/30 text-sm text-zinc-500 border-b border-zinc-800">
+              {t("options_aiConfiguredProviders")}
+            </div>
+            {savedKeys.map((k) => (
+              <div
+                key={k.provider}
+                className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800/50 last:border-0"
+              >
+                <div>
+                  <span className="text-sm text-zinc-300">
+                    {PROVIDER_INFO_LIST.find((p) => p.key === k.provider)?.name ?? k.provider}
+                  </span>
+                  {k.model && <span className="text-xs text-zinc-500 ml-2">{k.model}</span>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-zinc-600 font-mono">{k.key}</span>
+                  <button
+                    onClick={() => handleRemoveKey(k.provider)}
+                    className="text-xs text-zinc-600 hover:text-red-400 transition-colors"
+                  >
+                    {t("options_aiRemove")}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Section B: Feature Toggles */}
+      <section>
+        <h3 className="text-sm font-medium text-zinc-300 mb-4">{t("options_aiFeatures")}</h3>
+        <div className="rounded-xl border border-zinc-800 overflow-hidden">
+          <FeatureToggleRow
+            label={t("options_aiFeatureCategorize")}
+            description={t("options_aiFeatureCategorizeDesc")}
+            checked={features.categorize}
+            onChange={(v) => handleFeatureToggle("categorize", v)}
+          />
+          <FeatureToggleRow
+            label={t("options_aiFeatureQuotes")}
+            description={t("options_aiFeatureQuotesDesc")}
+            checked={features.quotes}
+            onChange={(v) => handleFeatureToggle("quotes", v)}
+          />
+          <FeatureToggleRow
+            label={t("options_aiFeatureNlRules")}
+            description={t("options_aiFeatureNlRulesDesc")}
+            checked={features.nlRules}
+            onChange={(v) => handleFeatureToggle("nlRules", v)}
+          />
+          <FeatureToggleRow
+            label={t("options_aiFeatureInsights")}
+            description={t("options_aiFeatureInsightsDesc")}
+            checked={features.insights}
+            onChange={(v) => handleFeatureToggle("insights", v)}
+          />
+        </div>
+      </section>
+
+      {/* Section C: Call History */}
+      <section className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-zinc-300">Call History</h3>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowLogs(!showLogs);
+                if (!showLogs) loadLogs();
+              }}
+            >
+              {showLogs ? "Hide" : "Show"}
+            </Button>
+            {logs.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearLogs}>
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+        {showLogs && (
+          <div className="rounded-xl border border-zinc-800 overflow-hidden max-h-64 overflow-y-auto">
+            {logs.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-zinc-600">
+                No AI calls yet. Calls will appear here after using AI features.
+              </div>
+            ) : (
+              logs.slice(0, 50).map((log) => (
+                <div
+                  key={log.id}
+                  className="px-3 py-2 border-b border-zinc-800/50 last:border-0 text-xs"
+                >
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-zinc-500 tabular-nums">
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${log.success ? "bg-lime-300" : "bg-red-400"}`}
+                    />
+                    <span className="text-zinc-400 font-medium">
+                      {FEATURE_LABELS[log.feature] ?? log.feature}
+                    </span>
+                    <span className="text-zinc-600">via {log.provider}</span>
+                  </div>
+                  <div className="text-zinc-600 truncate">
+                    {log.success ? log.output.slice(0, 80) : log.output}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function FeatureToggleRow({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50 last:border-0">
+      <div>
+        <p className="text-sm text-zinc-300">{label}</p>
+        <p className="text-xs text-zinc-500 mt-0.5">{description}</p>
+      </div>
+      <Toggle checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }

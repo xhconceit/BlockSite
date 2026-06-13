@@ -8,7 +8,7 @@ import type {
   QuoteItem,
 } from "@blocksite/core";
 import { DEFAULT_APP_CONFIG } from "@blocksite/core";
-import type { BlockSiteDB } from "./db";
+import type { BlockSiteDB, ApiKeyRecord } from "./db";
 
 // ── Rules Store ──
 export const rulesStore = {
@@ -162,5 +162,24 @@ export const settingsStore = {
 
   async remove(db: BlockSiteDB, key: string): Promise<void> {
     await db.settings.delete(key);
+  },
+};
+
+// ── API Keys Store ──
+export const apiKeysStore = {
+  async get(db: BlockSiteDB, provider: string): Promise<ApiKeyRecord | undefined> {
+    return db.apiKeys.get(provider);
+  },
+
+  async getAll(db: BlockSiteDB): Promise<ApiKeyRecord[]> {
+    return db.apiKeys.toArray();
+  },
+
+  async put(db: BlockSiteDB, record: ApiKeyRecord): Promise<void> {
+    await db.apiKeys.put(record);
+  },
+
+  async remove(db: BlockSiteDB, provider: string): Promise<void> {
+    await db.apiKeys.delete(provider);
   },
 };

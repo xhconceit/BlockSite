@@ -41,6 +41,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [extending, setExtending] = useState(false);
+  const [aiQuote, setAiQuote] = useState<{ text: string; author: string } | null>(null);
 
   useEffect(() => {
     initPage();
@@ -114,6 +115,24 @@ export default function App() {
         category,
       })
       .catch(() => {});
+
+    if (!customMessage) {
+      fetchAiQuote(category);
+    }
+  }
+
+  async function fetchAiQuote(category: Category) {
+    try {
+      const result = (await chrome.runtime.sendMessage({
+        type: "ai:generateQuote",
+        category,
+      })) as { text: string; author: string } | undefined;
+      if (result?.text) {
+        setAiQuote(result);
+      }
+    } catch {
+      /* AI not configured — fall back to static quotes */
+    }
   }
 
   async function handleUnlock() {
@@ -232,10 +251,10 @@ export default function App() {
           }}
         >
           <p className="text-base font-medium leading-relaxed" style={{ color: state.themeColor }}>
-            {state.customMessage || state.quote?.text || t("blocked_defaultQuote")}
+            {state.customMessage || aiQuote?.text || state.quote?.text || t("blocked_defaultQuote")}
           </p>
-          {!state.customMessage && state.quote?.author ? (
-            <p className="text-sm text-zinc-600 mt-3">— {state.quote.author}</p>
+          {!state.customMessage && (aiQuote?.author || state.quote?.author) ? (
+            <p className="text-sm text-zinc-600 mt-3">— {aiQuote?.author || state.quote?.author}</p>
           ) : null}
         </div>
 

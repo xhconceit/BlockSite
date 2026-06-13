@@ -10,6 +10,13 @@ import type {
 } from "@blocksite/core";
 import { STORAGE_DB_NAME } from "@blocksite/core";
 
+export interface ApiKeyRecord {
+  provider: string;
+  key: string;
+  baseUrl?: string;
+  model?: string;
+}
+
 export interface BlockSiteDB extends Dexie {
   rules: Dexie.Table<BlockedItem, string>;
   presets: Dexie.Table<{ category: Category; sites: string[]; quotes: QuoteItem[] }, Category>;
@@ -19,6 +26,7 @@ export interface BlockSiteDB extends Dexie {
   stats: Dexie.Table<BlockStatsRecord, string>;
   dailyStats: Dexie.Table<DailyStats, string>;
   settings: Dexie.Table<{ key: string; value: unknown }, string>;
+  apiKeys: Dexie.Table<ApiKeyRecord, string>;
 }
 
 export function openDB(): Promise<BlockSiteDB> {
@@ -33,6 +41,7 @@ export function openDB(): Promise<BlockSiteDB> {
     stats: "id, ruleId, category, timestamp",
     dailyStats: "date",
     settings: "key",
+    apiKeys: "provider",
   });
 
   return db.open().then(() => db);
