@@ -19,7 +19,10 @@ export interface ApiKeyRecord {
 
 export interface BlockSiteDB extends Dexie {
   rules: Dexie.Table<BlockedItem, string>;
-  presets: Dexie.Table<{ category: Category; sites: string[]; quotes: QuoteItem[] }, Category>;
+  presets: Dexie.Table<
+    { category: Category; sites: string[]; quotes: QuoteItem[]; goal?: string },
+    Category
+  >;
   schedule: Dexie.Table<ScheduleConfig, string>;
   auth: Dexie.Table<{ category: Category; hash: string }, Category>;
   unlockState: Dexie.Table<UnlockState, Category>;

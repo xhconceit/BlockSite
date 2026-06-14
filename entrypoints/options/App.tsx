@@ -897,6 +897,8 @@ function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo>
   const [cat, setCat] = useState(catKeys[0] || "social");
   const [sites, setSites] = useState<string[]>([]);
   const [newSite, setNewSite] = useState("");
+  const [goal, setGoal] = useState("");
+  const [goalSaved, setGoalSaved] = useState(false);
 
   useEffect(() => {
     const defaults: Record<string, string[]> = {
@@ -908,7 +910,27 @@ function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo>
       custom: [],
     };
     setSites(defaults[cat] || []);
+    loadGoal(cat);
   }, [cat]);
+
+  async function loadGoal(category: string) {
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: "getGoal", category });
+      setGoal((resp?.goal as string) || t(`goal_${category}`));
+    } catch {
+      setGoal(t(`goal_${category}`));
+    }
+  }
+
+  async function saveGoal() {
+    try {
+      await chrome.runtime.sendMessage({ type: "setGoal", category: cat, goal });
+      setGoalSaved(true);
+      setTimeout(() => setGoalSaved(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  }
 
   function addSite() {
     if (!newSite.trim() || sites.includes(newSite.trim())) return;
@@ -943,6 +965,28 @@ function PresetsPanel({ categories }: { categories: Record<string, CategoryInfo>
         ))}
       </div>
 
+      {/* Goal */}
+      <div className="rounded-xl border border-zinc-800 p-4 mb-4">
+        <label className="text-sm font-medium text-zinc-300 mb-2 block">{t("options_goal")}</label>
+        <div className="flex gap-2">
+          <Input
+            placeholder={t("options_goalPlaceholder")}
+            value={goal}
+            onChange={(e) => {
+              setGoal(e.target.value);
+              setGoalSaved(false);
+            }}
+            onKeyDown={(e) => e.key === "Enter" && saveGoal()}
+            className="flex-1"
+          />
+          <Button size="sm" onClick={saveGoal}>
+            {goalSaved ? "✓" : t("common_save")}
+          </Button>
+        </div>
+        <p className="text-xs text-zinc-600 mt-2">{t("options_goalPlaceholder")}</p>
+      </div>
+
+      {/* Sites */}
       <div className="rounded-xl border border-zinc-800 p-4 mb-4">
         <div className="flex gap-2 mb-4">
           <Input

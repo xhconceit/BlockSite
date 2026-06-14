@@ -73,3 +73,12 @@ export const DEFAULT_QUOTES: Record<string, QuoteItem[]> = {
     { id: "custom-5", text: "先完成，再放松", author: "" },
   ],
 };
+
+export const DEFAULT_GOALS: Record<string, string> = {
+  social: "今天不刷社交媒体，把时间留给真正重要的事",
+  video: "今天克制自己，不被算法推荐牵着走",
+  game: "今天不打开任何游戏，现实的成就更值得追求",
+  news: "今天只看 15 分钟新闻，拒绝信息焦虑",
+  adult: "今天选择更健康的娱乐方式",
+  custom: "完成今天的任务，再来放松",
+};

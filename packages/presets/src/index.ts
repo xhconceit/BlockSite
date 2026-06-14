@@ -1,5 +1,5 @@
 import type { QuoteItem } from "@blocksite/core";
-import { DEFAULT_PRESET_SITES, DEFAULT_QUOTES } from "@blocksite/core";
+import { DEFAULT_PRESET_SITES, DEFAULT_QUOTES, DEFAULT_GOALS } from "@blocksite/core";
 import { presets as presetsRepo } from "@blocksite/storage";
 
 export async function getSites(category: string): Promise<string[]> {
@@ -69,6 +69,20 @@ export async function getRandomQuote(category: string): Promise<QuoteItem | unde
   if (quotes.length === 0) return undefined;
   const idx = Math.floor(Math.random() * quotes.length);
   return quotes[idx];
+}
+
+export async function getGoal(category: string): Promise<string> {
+  const goal = await presetsRepo.getGoal(category);
+  if (goal !== undefined) return goal;
+  return DEFAULT_GOALS[category] ?? DEFAULT_GOALS["custom"]!;
+}
+
+export async function setGoal(category: string, goal: string): Promise<void> {
+  await presetsRepo.setGoal(category, goal);
+}
+
+export async function resetGoalToDefault(category: string): Promise<void> {
+  await presetsRepo.setGoal(category, "");
 }
 
 export async function resetSitesToDefault(category: string): Promise<void> {

@@ -432,6 +432,21 @@ async function handleMessage(
       return { url: "" };
     },
 
+    getGoal: async (msg) => {
+      const category = msg["category"] as Category;
+      const { presets } = await import("../packages/storage/src");
+      const stored = await presets.getGoal(category);
+      return { goal: stored ?? "" };
+    },
+
+    setGoal: async (msg) => {
+      const category = msg["category"] as Category;
+      const goal = msg["goal"] as string;
+      const { presets } = await import("../packages/storage/src");
+      await presets.setGoal(category, goal);
+      return { success: true };
+    },
+
     getStats: async (msg) => {
       const from = msg["from"] as string;
       const to = msg["to"] as string;

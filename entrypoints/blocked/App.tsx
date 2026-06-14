@@ -18,6 +18,7 @@ interface PageState {
   warning: boolean;
   quote: QuoteItem | undefined;
   remainingUnlocks: number;
+  goal: string;
 }
 
 function getQuotes(
@@ -79,6 +80,16 @@ export default function App() {
         chrome.runtime.sendMessage({ type: "checkUnlock", category }),
       ]);
 
+      let goal = t(`goal_${category}`);
+      try {
+        const goalResp = await chrome.runtime.sendMessage({ type: "getGoal", category });
+        if (goalResp?.goal) {
+          goal = goalResp.goal as string;
+        }
+      } catch {
+        /* use i18n fallback */
+      }
+
       setState({
         ruleId,
         category,
@@ -91,6 +102,7 @@ export default function App() {
         warning: (checkResp as { warning: boolean })?.warning || false,
         quote,
         remainingUnlocks: (checkResp as { remainingUnlocks?: number })?.remainingUnlocks ?? 0,
+        goal,
       });
     } catch {
       setState({
@@ -105,6 +117,7 @@ export default function App() {
         warning: false,
         quote,
         remainingUnlocks: 0,
+        goal: t(`goal_${category}`),
       });
     }
 
@@ -241,6 +254,25 @@ export default function App() {
             {state.blockedUrl}
           </p>
         )}
+
+        {/* Goal */}
+        <div
+          className="rounded-2xl p-5 text-center relative overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${state.themeColor}12, ${state.themeColor}04)`,
+            border: `1px solid ${state.themeColor}18`,
+          }}
+        >
+          <p
+            className="text-[11px] font-medium uppercase tracking-wider mb-2"
+            style={{ color: `${state.themeColor}99` }}
+          >
+            {t("blocked_yourGoal")}
+          </p>
+          <p className="text-sm font-medium leading-relaxed text-zinc-300">
+            {state.goal || t("blocked_defaultQuote")}
+          </p>
+        </div>
 
         {/* Quote */}
         <div

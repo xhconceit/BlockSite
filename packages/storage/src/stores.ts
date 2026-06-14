@@ -68,6 +68,22 @@ export const presetsStore = {
     const existing = await db.presets.get(category);
     await db.presets.put({ category, sites: existing?.sites ?? [], ...existing, quotes });
   },
+
+  async getGoal(db: BlockSiteDB, category: Category): Promise<string | undefined> {
+    const record = await db.presets.get(category);
+    return record?.goal;
+  },
+
+  async setGoal(db: BlockSiteDB, category: Category, goal: string): Promise<void> {
+    const existing = await db.presets.get(category);
+    await db.presets.put({
+      category,
+      sites: existing?.sites ?? [],
+      quotes: existing?.quotes ?? [],
+      ...existing,
+      goal,
+    });
+  },
 };
 
 // ── Schedule Store ──

@@ -98,6 +98,8 @@
   "options_presetsTitle": { "message": "分类预设" },
   "options_presetsDesc": { "message": "可一键拦截的预定义网站" },
   "options_addSite": { "message": "添加网站..." },
+  "options_goal": { "message": "目标" },
+  "options_goalPlaceholder": { "message": "显示在拦截页面作为每日目标..." },
   "options_noPresets": { "message": "此分类无预设" },
 
   "options_passwordTitle": { "message": "密码保护" },
@@ -142,6 +144,7 @@
     "message": "今日剩余 $COUNT$ 次解锁",
     "placeholders": { "count": { "content": "$1" } }
   },
+  "blocked_yourGoal": { "message": "你的目标" },
   "blocked_footer": { "message": "BlockSite · 保持专注" },
   "blocked_defaultQuote": { "message": "保持专注。" },
 
@@ -196,6 +199,13 @@
   "quote_custom_3": { "message": "你的未来由专注的此刻构成" },
   "quote_custom_4": { "message": "拖延的每一分钟都是你在欠自己" },
   "quote_custom_5": { "message": "先完成，再放松" },
+
+  "goal_social": { "message": "今天不刷社交媒体，把时间留给真正重要的事" },
+  "goal_video": { "message": "今天不被算法推荐牵着走，自己决定看什么" },
+  "goal_game": { "message": "今天不打开任何游戏，现实的成就更值得追求" },
+  "goal_news": { "message": "今天只看 15 分钟新闻，拒绝信息焦虑" },
+  "goal_adult": { "message": "今天选择更健康的娱乐方式" },
+  "goal_custom": { "message": "完成今天的任务，再来放松" },
 
   "options_tabSettings": { "message": "设置" },
   "options_tabCategories": { "message": "分类管理" },

@@ -100,6 +100,8 @@
   "options_presetsTitle": { "message": "Category Presets" },
   "options_presetsDesc": { "message": "Predefined sites you can block with one click" },
   "options_addSite": { "message": "Add site..." },
+  "options_goal": { "message": "Goal" },
+  "options_goalPlaceholder": { "message": "Shown on blocked page as your daily goal..." },
   "options_noPresets": { "message": "No presets for this category" },
 
   "options_passwordTitle": { "message": "Password Protection" },
@@ -144,6 +146,7 @@
     "message": "$COUNT$ unlocks remaining today",
     "placeholders": { "count": { "content": "$1" } }
   },
+  "blocked_yourGoal": { "message": "Your Goal" },
   "blocked_footer": { "message": "BlockSite · Stay focused" },
   "blocked_defaultQuote": { "message": "Stay focused." },
 
@@ -200,6 +203,13 @@
   "quote_custom_3": { "message": "Your future is built on moments of focus" },
   "quote_custom_4": { "message": "Every minute of procrastination is a debt to yourself" },
   "quote_custom_5": { "message": "Finish first, then relax" },
+
+  "goal_social": { "message": "No social media today — save time for what truly matters" },
+  "goal_video": { "message": "Don't let the algorithm decide what you watch today" },
+  "goal_game": { "message": "No games today — real achievements matter more" },
+  "goal_news": { "message": "Only 15 minutes of news today — avoid information anxiety" },
+  "goal_adult": { "message": "Choose healthier entertainment today" },
+  "goal_custom": { "message": "Complete today's tasks first, then relax" },
 
   "options_tabSettings": { "message": "Settings" },
   "options_tabCategories": { "message": "Categories" },

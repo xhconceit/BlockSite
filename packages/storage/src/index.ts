@@ -140,8 +140,17 @@ export const presets = {
   async setSites(category: Category, sites: string[]): Promise<void> {
     if (fallbackMode) {
       const fb = await loadFallback();
-      const p = (fb["presets"] as Record<string, { sites: string[]; quotes: QuoteItem[] }>) ?? {};
-      p[category] = { sites, quotes: p[category]?.quotes ?? [] };
+      const p =
+        (fb["presets"] as Record<
+          string,
+          { sites: string[]; quotes: QuoteItem[]; goal?: string }
+        >) ?? {};
+      const existing = p[category];
+      p[category] = {
+        sites,
+        quotes: existing?.quotes ?? [],
+        ...(existing?.goal !== undefined ? { goal: existing.goal } : {}),
+      };
       fb["presets"] = p;
       await saveFallback(fb);
       return;
@@ -159,13 +168,45 @@ export const presets = {
   async setQuotes(category: Category, quotes: QuoteItem[]): Promise<void> {
     if (fallbackMode) {
       const fb = await loadFallback();
-      const p = (fb["presets"] as Record<string, { sites: string[]; quotes: QuoteItem[] }>) ?? {};
-      p[category] = { sites: p[category]?.sites ?? [], quotes };
+      const p =
+        (fb["presets"] as Record<
+          string,
+          { sites: string[]; quotes: QuoteItem[]; goal?: string }
+        >) ?? {};
+      const existing = p[category];
+      p[category] = {
+        sites: existing?.sites ?? [],
+        quotes,
+        ...(existing?.goal !== undefined ? { goal: existing.goal } : {}),
+      };
       fb["presets"] = p;
       await saveFallback(fb);
       return;
     }
     return presetsStore.setQuotes(getDB(), category, quotes);
+  },
+  async getGoal(category: Category): Promise<string | undefined> {
+    if (fallbackMode) {
+      const fb = await loadFallback();
+      const p = (fb["presets"] as Record<string, { goal?: string }>) ?? {};
+      return p[category]?.goal;
+    }
+    return presetsStore.getGoal(getDB(), category);
+  },
+  async setGoal(category: Category, goal: string): Promise<void> {
+    if (fallbackMode) {
+      const fb = await loadFallback();
+      const p =
+        (fb["presets"] as Record<
+          string,
+          { sites: string[]; quotes: QuoteItem[]; goal?: string }
+        >) ?? {};
+      p[category] = { sites: p[category]?.sites ?? [], quotes: p[category]?.quotes ?? [], goal };
+      fb["presets"] = p;
+      await saveFallback(fb);
+      return;
+    }
+    return presetsStore.setGoal(getDB(), category, goal);
   },
 };
 

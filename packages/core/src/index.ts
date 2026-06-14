@@ -28,4 +28,4 @@ export {
   STORAGE_DB_NAME,
   STORAGE_DB_VERSION,
 } from "./constants";
-export { DEFAULT_PRESET_SITES, DEFAULT_QUOTES } from "./defaults";
+export { DEFAULT_PRESET_SITES, DEFAULT_QUOTES, DEFAULT_GOALS } from "./defaults";
